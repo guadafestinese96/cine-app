@@ -1,0 +1,250 @@
+<div style="display: flex; gap: 30px; flex-wrap: wrap; justify-content: center; padding: 20px;">
+  
+  <!-- 1. Cargar Película -->
+  <div style="flex: 1; min-width: 300px; max-width: 400px; padding: 20px; border: 1px solid #ccc; border-radius: 8px;">
+    <h2>1. Cargar Película</h2>
+    <form [formGroup]="formPelicula" (ngSubmit)="guardarPelicula()">
+      <div>
+        <label>Título:</label>
+        <input type="text" formControlName="nombre" style="width: 100%; margin-bottom: 10px; padding: 6px;">
+      </div>
+      <div>
+        <label>Sinopsis:</label>
+        <textarea formControlName="sinopsis" rows="2" style="width: 100%; margin-bottom: 10px; padding: 6px;"></textarea>
+      </div>
+      <div>
+        <label>Duración (min):</label>
+        <input type="number" formControlName="duracion_minutos" style="width: 100%; margin-bottom: 10px; padding: 6px;">
+      </div>
+
+      <div style="margin-bottom: 15px;">
+        <label><strong>Géneros:</strong></label>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 5px; border: 1px solid #ccc; padding: 10px; border-radius: 4px; max-height: 120px; overflow-y: auto;">
+          @for (g of listaGeneros; track g) {
+            <label style="font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+              <input type="checkbox" [value]="g" [checked]="generosSeleccionados.includes(g)" (change)="onGeneroChange($event, g)"/>
+              {{ g }}
+            </label>
+          }
+        </div>
+      </div>
+
+      <div>
+        <label>Clasificación:</label>
+        <select formControlName="clasificacion" style="width: 100%; margin-bottom: 10px; padding: 6px;">
+          <option value="ATP">ATP</option>
+          <option value="+13">+13</option>
+          <option value="+16">+16</option>
+          <option value="+18">+18</option>
+        </select>
+      </div>
+
+      <div>
+        <label>URL Imagen:</label>
+        <input type="text" formControlName="imagen_url" style="width: 100%; margin-bottom: 10px; padding: 6px;">
+      </div>
+
+      <div>
+        <label>Fecha de Estreno (Opcional - "Próximamente"):</label>
+        <input type="date" formControlName="fecha_estreno" style="width: 100%; margin-bottom: 15px; padding: 6px;">
+      </div>
+
+      <button type="submit" [disabled]="formPelicula.invalid" style="width: 100%; padding: 10px; background: #e0a800; border: none; font-weight: bold; cursor: pointer;">
+        Guardar Película
+      </button>
+    </form>
+    
+    @if (mensajePelicula) {
+      <p style="margin-top: 10px; font-weight: bold;">{{ mensajePelicula }}</p>
+    }
+  </div>
+
+  <!-- 2. Programar Función -->
+  <div style="flex: 1; min-width: 300px; max-width: 400px; padding: 20px; border: 1px solid #ccc; border-radius: 8px;">
+    <h2>2. Programar Función</h2>
+    <form [formGroup]="formFuncion" (ngSubmit)="guardarFuncion()">
+      <div>
+        <label>Película:</label>
+        <select formControlName="pelicula_id" (change)="onPeliculaChange($event)" style="width: 100%; margin-bottom: 10px; padding: 6px;">
+          <option value="">Seleccionar película</option>
+          @for (p of peliculas; track p.id) {
+            <option [value]="p.id">{{ p.nombre || p.titulo }} ({{ p.duracion_minutos || p.duracion }} min)</option>
+          }
+        </select>
+      </div>
+
+      @if (formFuncion.get('pelicula_id')?.value) {
+        <div style="margin-bottom: 15px; background: #f8f9fa; border: 1px solid #ddd; padding: 10px; border-radius: 6px;">
+          <h4 style="margin: 0 0 8px 0; font-size: 0.9rem; color: #333;">📅 Funciones programadas:</h4>
+          @for (f of funcionesPeliculaSeleccionada; track f.id) {
+            <div style="font-size: 0.82rem; padding: 6px 8px; background: #e9ecef; border-radius: 4px; margin-bottom: 6px;">
+              • <strong>{{ f.fecha_hora | date:'dd/MM/yyyy HH:mm':'UTC' }}hs</strong> 
+              <span style="color: #007bff; font-weight: bold;">(Termina {{ calcularHoraFin(f.fecha_hora, f.peliculas?.duracion_minutos || f.peliculas?.duracion) }}hs)</span> 
+              - {{ f.salas?.nombre || 'Sala ' + f.sala_id }}
+            </div>
+          } @empty {
+            <p style="font-size: 0.8rem; color: #777; margin: 0;">Sin funciones programadas.</p>
+          }
+        </div>
+      }
+
+      <div>
+        <label>Sala:</label>
+        <select formControlName="sala_id" style="width: 100%; margin-bottom: 10px; padding: 6px;">
+          <option value="">Seleccionar sala</option>
+          @for (s of salas; track s.id) {
+            <option [value]="s.id">{{ s.nombre }}</option>
+          }
+        </select>
+      </div>
+
+      <div>
+        <label>Fecha y Hora:</label>
+        <input type="datetime-local" formControlName="fecha_hora" style="width: 100%; margin-bottom: 10px; padding: 6px;">
+      </div>
+
+      <div>
+        <label>Formato:</label>
+        <select formControlName="formato" style="width: 100%; margin-bottom: 10px; padding: 6px;">
+          <option value="2D">2D</option>
+          <option value="3D">3D</option>
+          <option value="4D">4D</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Idioma:</label>
+        <select formControlName="idioma" style="width: 100%; margin-bottom: 10px; padding: 6px;">
+          <option value="Castellano">Castellano</option>
+          <option value="Subtitulada">Subtitulada</option>
+        </select>
+      </div>
+
+      <button type="submit" [disabled]="formFuncion.invalid" style="width: 100%; padding: 10px; background: #28a745; color: white; border: none; font-weight: bold; cursor: pointer; margin-top: 10px;">
+        Programar Función
+      </button>
+    </form>
+
+    @if (mensajeFuncion) {
+      <p style="margin-top: 10px; font-weight: bold;" [style.color]="mensajeFuncion.includes('❌') ? 'red' : 'green'">{{ mensajeFuncion }}</p>
+    }
+  </div>
+
+  <!-- 3. Cargar / Editar Candy Bar -->
+  <div style="flex: 1; min-width: 300px; max-width: 400px; padding: 20px; border: 1px solid #ccc; border-radius: 8px;">
+    <h2>3. Candy Bar (Confitería)</h2>
+    <form [formGroup]="formCandy" (ngSubmit)="guardarProductoCandy()">
+      <div>
+        <label>Nombre del Producto / Combo:</label>
+        <input type="text" formControlName="nombre" style="width: 100%; margin-bottom: 10px; padding: 6px;">
+      </div>
+      <div>
+        <label>Descripción:</label>
+        <textarea formControlName="descripcion" rows="2" style="width: 100%; margin-bottom: 10px; padding: 6px;"></textarea>
+      </div>
+      <div>
+        <label>Precio ($):</label>
+        <input type="number" formControlName="precio" style="width: 100%; margin-bottom: 10px; padding: 6px;">
+      </div>
+      <div>
+        <label>Categoría:</label>
+        <select formControlName="categoria" style="width: 100%; margin-bottom: 10px; padding: 6px;">
+          <option value="Pochoclos">Pochoclos</option>
+          <option value="Bebidas">Bebidas</option>
+          <option value="Golosinas">Golosinas</option>
+          <option value="Combos">Combos Especiales</option>
+        </select>
+      </div>
+      <div>
+        <label>URL Imagen:</label>
+        <input type="text" formControlName="imagen_url" style="width: 100%; margin-bottom: 10px; padding: 6px;">
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+          <input type="checkbox" formControlName="es_combo">
+          <strong>¿Es un Combo Especial?</strong>
+        </label>
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <button type="submit" [disabled]="formCandy.invalid" style="flex: 1; padding: 10px; background: #17a2b8; color: white; border: none; font-weight: bold; cursor: pointer; border-radius: 4px;">
+          {{ productoEnEdicionId ? 'Actualizar Producto' : 'Guardar Producto' }}
+        </button>
+        @if (productoEnEdicionId) {
+          <button type="button" (click)="limpiarFormCandy()" style="padding: 10px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            Cancelar
+          </button>
+        }
+      </div>
+    </form>
+
+    @if (mensajeCandy) {
+      <p style="margin-top: 10px; font-weight: bold;">{{ mensajeCandy }}</p>
+    }
+  </div>
+
+</div>
+
+<!-- SECCIONES INFERIORES: GESTIÓN DE VISIBILIDAD -->
+
+<div style="max-width: 1100px; margin: 30px auto; padding: 0 20px;">
+  
+  <!-- GESTIÓN DE VISIBILIDAD DE PELÍCULAS -->
+  <div style="border: 1px solid #ccc; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
+    <h3>📽️ Gestión de Visibilidad de Películas</h3>
+    @for (p of peliculas; track p.id) {
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee;">
+        <span>
+          <strong>{{ p.nombre || p.titulo }}</strong> 
+          <small style="color: #666;">({{ p.duracion_minutos || p.duracion }} min)</small>
+        </span>
+        <button 
+          type="button" 
+          (click)="alternarVisibilidad(p)" 
+          [style.background]="p.activa !== false ? '#28a745' : '#dc3545'"
+          style="color: white; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">
+          {{ p.activa !== false ? '👁️ Visible en Cartelera' : '🙈 Oculta' }}
+        </button>
+      </div>
+    } @empty {
+      <p style="color: #888; font-style: italic;">No hay películas registradas.</p>
+    }
+  </div>
+
+  <!-- GESTIÓN DE PRODUCTOS DE CANDY BAR -->
+  <div style="border: 1px solid #ccc; border-radius: 8px; padding: 20px;">
+    <h3>🍿 Productos de Candy Bar Registrados</h3>
+    @for (c of productosCandy; track c.id) {
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee;">
+        <div>
+          <strong>{{ c.nombre }}</strong> - ${{ c.precio }} 
+          <span style="font-size: 0.8rem; background: #e2e3e5; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">{{ c.categoria || 'Sin cat.' }}</span>
+          @if (c.es_combo) {
+            <span style="font-size: 0.8rem; background: #ffeeba; color: #856404; padding: 2px 6px; border-radius: 4px; margin-left: 4px;">Combo</span>
+          }
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+          <button 
+            type="button" 
+            (click)="editarProductoCandy(c)" 
+            style="background: #ffc107; color: #212529; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;"
+          >
+            ✏️ Editar
+          </button>
+          <button 
+            type="button" 
+            (click)="alternarVisibilidadCandy(c)" 
+            [style.background]="c.activo !== false ? '#28a745' : '#dc3545'" 
+            style="color: white; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;"
+          >
+            {{ c.activo !== false ? 'Disponible' : 'Agotado/Oculto' }}
+          </button>
+        </div>
+      </div>
+    } @empty {
+      <p style="color: #888; font-style: italic;">No hay productos cargados en el Candy Bar.</p>
+    }
+  </div>
+
+</div>

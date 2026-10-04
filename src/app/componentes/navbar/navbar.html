@@ -1,0 +1,132 @@
+<link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+/>
+
+<nav
+  style="
+    background-color: #1a1a1a;
+    padding: 15px;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    justify-content: space-between;
+  "
+>
+  <!-- LOGO E IDENTIFICADOR -->
+  <a
+    routerLink="/catalogo"
+    routerLinkActive="active"
+    style="color: white; text-decoration: none; padding: 5px 10px"
+  >
+    <div class="icon" style="display:flex; justify-content:center; align-items:end">
+      <img src="cine-img.png" style="height: 50px; margin-right: 5px;" alt="Logo CINEWIDI" />
+      <h1 style="margin: 0; font-size: 1.2rem; color:#F3C769">CINEWIDI</h1>
+    </div>
+  </a>
+
+  <!-- MENÚ DE NAVEGACIÓN -->
+  <div class="menu">
+    <a
+      routerLink="/catalogo"
+      routerLinkActive="active"
+      style="color: white; text-decoration: none; padding: 5px 10px"
+      >Cartelera</a
+    >
+    <a
+      routerLink="/admin"
+      routerLinkActive="active"
+      style="color: white; text-decoration: none; padding: 5px 10px"
+      >Admin</a
+    >
+    <a
+      routerLink="/candy"
+      routerLinkActive="active"
+      style="color: white; text-decoration: none; padding: 5px 10px"
+      >Candy Bar</a
+    >
+  </div>
+
+  <!-- SECCIÓN DE LOGIN / USUARIO -->
+  <div class="login" style="display: flex; align-items: center">
+    @if (usuarioLogueado) {
+      <!-- CONTENEDOR USUARIO LOGUEADO (ABRE EL MENÚ LATERAL) -->
+      <div
+        (click)="toggleMenu()"
+        title="Opciones de cuenta"
+        style="
+          color: white;
+          cursor: pointer;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 2px;
+        "
+      >
+        <span
+          style="
+            font-size: 0.78rem;
+            font-weight: bold;
+            color: #F3C769;
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          "
+        >
+          {{ usuarioLogueado.nombre || usuarioLogueado.nombre_completo || usuarioLogueado.email }}
+        </span>
+        <i class="fa-solid fa-circle-user" style="color: #F3C769; font-size: 26px"></i>
+      </div>
+    } @else {
+      <!-- CONTENEDOR INICIAR SESIÓN -->
+      <a
+        routerLink="/login"
+        routerLinkActive="active"
+        title="Iniciar Sesión"
+        style="
+          color: white;
+          text-decoration: none;
+          padding: 5px 10px;
+          display: flex;
+          align-items: center;
+        "
+      >
+        <i class="fa-solid fa-circle-user" style="color: white; font-size: 30px"></i>
+      </a>
+    }
+  </div>
+</nav>
+
+<!-- OVERLAY Y SIDEBAR DESPLEGABLE -->
+@if (isMenuOpen) {
+  <div class="overlay" (click)="toggleMenu()"></div>
+}
+
+<div class="sidebar" [class.open]="isMenuOpen">
+  <div class="sidebar-header">
+    <h3>Mi Cuenta</h3>
+    <button class="close-btn" (click)="toggleMenu()">&times;</button>
+  </div>
+
+  @if (usuarioLogueado) {
+    <div class="sidebar-content">
+      <div class="user-details">
+        <i class="fa-solid fa-user-circle" style="font-size: 2.5rem; color: #F3C769;"></i>
+        <p class="user-name">
+          {{ usuarioLogueado.nombre || usuarioLogueado.nombre_completo || usuarioLogueado.email }}
+        </p>
+      </div>
+
+      <hr style="border-color: #333; margin: 15px 0;" />
+
+      <a routerLink="/perfil" class="sidebar-link" (click)="toggleMenu()">
+        <i class="fa-solid fa-id-card"></i> Mi Perfil
+      </a>
+
+      <button class="logout-btn" (click)="cerrarSesion()">
+        <i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión
+      </button>
+    </div>
+  }
+</div>

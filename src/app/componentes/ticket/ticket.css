@@ -1,0 +1,18 @@
+@media print {
+  /* Ocultar la barra de navegación superior y los botones al generar el PDF */
+  app-navbar,
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+  }
+
+  #seccion-ticket {
+    border: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+}

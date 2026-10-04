@@ -1,0 +1,236 @@
+<div style="padding: 20px; max-width: 1100px; margin: 0 auto">
+  
+  <!-- SECCIÓN DESTACADA: TOP 3 PELÍCULAS MÁS VENDIDAS (RF-05) -->
+  @if (topPeliculas && topPeliculas.length > 0) {
+    <section style="margin-bottom: 35px; background: linear-gradient(135deg, #fff3cd 0%, #ffecb3 100%); padding: 20px; border-radius: 12px; border: 1px solid #ffeeba; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+      <h2 style="color: #856404; margin-top: 0; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+        🔥 Top 3 Películas Más Vendidas
+      </h2>
+
+      <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: flex-start;">
+        @for (p of topPeliculas; track p.id; let i = $index) {
+          <div style="flex: 1; min-width: 240px; max-width: 320px; background: #ffffff; padding: 15px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); display: flex; flex-direction: column; justify-content: space-between; position: relative;">
+            
+            <!-- Badge de Posición #1, #2, #3 -->
+            <span style="position: absolute; top: 10px; left: 10px; background: #e0a800; color: white; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 2;">
+              #{{ i + 1 }}
+            </span>
+
+            <div>
+              <img
+                [src]="p.imagen_url || 'https://via.placeholder.com/200x300?text=Sin+Imagen'"
+                [alt]="p.nombre || p.titulo"
+                style="width: 100%; height: 260px; object-fit: cover; border-radius: 6px; margin-bottom: 10px;"
+              />
+
+              <h3 style="margin: 5px 0; font-size: 1.1rem; color: #212529;">{{ p.nombre || p.titulo }}</h3>
+              
+              <p style="font-size: 0.85rem; color: #555; margin: 4px 0;" *ngIf="p.duracion_minutos || p.duracion">
+                <strong>Duración:</strong> {{ p.duracion_minutos || p.duracion }} min
+              </p>
+            </div>
+
+            <div style="margin-top: 10px; text-align: center;">
+              <span style="background: #28a745; color: white; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; display: block;">
+                🎟️ {{ p.entradasVendidas || 0 }} entradas vendidas
+              </span>
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- SECCIÓN PRÓXIMAMENTE (RF-06) -->
+  @if (proximosEstrenos && proximosEstrenos.length > 0) {
+    <section style="margin-bottom: 35px; background: #e3f2fd; padding: 20px; border-radius: 12px; border: 1px solid #90caf9;">
+      <h2 style="color: #0d47a1; margin-top: 0; margin-bottom: 15px;">🚀 Próximamente en Cines</h2>
+
+      <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: flex-start;">
+        @for (p of proximosEstrenos; track p.id) {
+          <div style="width: 240px; background: #ffffff; padding: 15px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); display: flex; flex-direction: column; justify-content: space-between;">
+            
+            <div>
+              <img
+                [src]="p.imagen_url || 'https://via.placeholder.com/200x300?text=Pr%C3%B3ximamente'"
+                [alt]="p.nombre || p.titulo"
+                style="width: 100%; height: 260px; object-fit: cover; border-radius: 6px; margin-bottom: 10px;"
+              />
+
+              <h3 style="margin: 5px 0; font-size: 1.1rem; color: #212529;">{{ p.nombre || p.titulo }}</h3>
+              
+              <!-- SINOPSIS CON VER MÁS / VER MENOS EN PRÓXIMAMENTE -->
+              <p style="font-size: 0.85rem; color: #555; margin: 4px 0; line-height: 1.4;">
+                @if (p.expandida) {
+                  {{ p.sinopsis }}
+                } @else {
+                  {{ p.sinopsis | slice:0:110 }}@if (p.sinopsis?.length > 110) { ... }
+                }
+              </p>
+
+              @if (p.sinopsis?.length > 110) {
+                <button 
+                  type="button" 
+                  (click)="p.expandida = !p.expandida" 
+                  style="background: none; border: none; color: #007bff; font-weight: bold; cursor: pointer; padding: 0; font-size: 0.8rem; text-decoration: underline; margin-bottom: 6px;">
+                  {{ p.expandida ? 'Ver menos' : 'Ver más' }}
+                </button>
+              }
+
+              <p style="font-size: 0.85rem; color: #0d47a1; font-weight: bold; margin-top: 8px;">
+                Estreno: {{ p.fecha_estreno | date: 'dd/MM/yyyy' }}
+              </p>
+            </div>
+
+            <button
+              (click)="activarAlerta(p)"
+              style="margin-top: 12px; width: 100%; padding: 8px; background: #17a2b8; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;"
+            >
+              🔔 Notificarme
+            </button>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  <h2>Películas en Cartelera</h2>
+
+  <!-- CONTROLES DE BÚSQUEDA Y FILTRO (RF-04) -->
+  <div class="buscador" style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap">
+    <input
+      type="text"
+      placeholder="Buscar película por nombre..."
+      [(ngModel)]="textoBusqueda"
+      style="
+        padding: 8px 12px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        flex: 1;
+        min-width: 200px;
+      "
+    />
+
+    <select
+      [(ngModel)]="generoSeleccionado"
+      style="padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px"
+    >
+      <option value="Todos">Todos los géneros</option>
+      <option value="Acción">Acción</option>
+      <option value="Aventura">Aventura</option>
+      <option value="Comedia">Comedia</option>
+      <option value="Drama">Drama</option>
+      <option value="Ciencia Ficción">Ciencia Ficción</option>
+      <option value="Terror">Terror</option>
+      <option value="Animación">Animación</option>
+    </select>
+  </div>
+
+  <!-- GRILLA DE PELÍCULAS FILTRADAS -->
+  <div style="display: flex; gap: 20px; flex-wrap: wrap">
+    @for (p of peliculasFiltradas; track p.id) {
+      <div
+        style="
+          border: 1px solid #ccc;
+          width: 260px;
+          padding: 15px;
+          border-radius: 8px;
+          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+        "
+      >
+        <div>
+          <!-- Imagen del Póster -->
+          <img
+            [src]="p.imagen_url || 'https://via.placeholder.com/200x300?text=Sin+Imagen'"
+            [alt]="p.nombre || p.titulo"
+            style="width: 100%; height: 280px; object-fit: cover; border-radius: 4px"
+          />
+
+          <h3 style="margin: 10px 0 5px 0">{{ p.nombre || p.titulo }}</h3>
+
+          <!-- SINOPSIS CON VER MÁS / VER MENOS EN CARTELERA -->
+          <p style="font-size: 0.85rem; color: #555; margin: 5px 0; line-height: 1.4;">
+            @if (p.expandida) {
+              {{ p.sinopsis }}
+            } @else {
+              {{ p.sinopsis | slice:0:110 }}@if (p.sinopsis?.length > 110) { ... }
+            }
+          </p>
+
+          @if (p.sinopsis?.length > 110) {
+            <button 
+              type="button" 
+              (click)="p.expandida = !p.expandida" 
+              style="background: none; border: none; color: #007bff; font-weight: bold; cursor: pointer; padding: 0; font-size: 0.8rem; text-decoration: underline; margin-bottom: 6px;">
+              {{ p.expandida ? 'Ver menos' : 'Ver más' }}
+            </button>
+          }
+
+          <p style="margin: 5px 0; font-size: 0.9rem" *ngIf="p.duracion_minutos || p.duracion">
+            <strong>Duración:</strong> {{ p.duracion_minutos || p.duracion }} min
+          </p>
+
+          @if (p.clasificacion || p.restriccion_edad) {
+            <span
+              style="
+                background: #007bff;
+                color: white;
+                padding: 2px 8px;
+                border-radius: 4px;
+                font-size: 0.8rem;
+                display: inline-block;
+                margin-bottom: 10px;
+              "
+            >
+              {{ p.clasificacion || p.restriccion_edad }}
+            </span>
+          }
+        </div>
+
+        <!-- FUNCIONES PROGRAMADAS DE ESTA PELÍCULA -->
+        <div style="border-top: 1px solid #eee; padding-top: 10px; margin-top: 10px">
+          <h4 style="margin: 5px 0; font-size: 0.95rem">Horarios disponibles:</h4>
+
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            @for (f of getFuncionesDePelicula(p.id); track f.id) {
+              <button
+                (click)="seleccionarFuncion(f)"
+                style="
+                  padding: 6px;
+                  background: #28a745;
+                  color: white;
+                  border: none;
+                  border-radius: 4px;
+                  font-size: 0.85rem;
+                  cursor: pointer;
+                  text-align: left;
+                "
+              >
+                📅 {{ f.fecha_hora | date: 'dd/MM HH:mm' }}hs -
+                {{ f.salas?.nombre || 'Sala ' + (f.sala_id || 1) }} ({{ f.formato || '2D' }}
+                {{ f.idioma || 'Castellano' }})
+              </button>
+            } @empty {
+              <p style="font-size: 0.8rem; color: #888; font-style: italic">
+                Sin funciones programadas
+              </p>
+            }
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items:center; margin-top: 12px; border-top: 1px solid #eee; padding-top: 8px;">
+          <p style="margin: 0; font-size: 0.85rem;">Estrellas</p>
+          <button type="submit" style="width: 50%; padding: 8px; background: #020202; color: white; border: none; border-radius: 4px; cursor: pointer;" disabled=""> Ver Reseñas </button>
+        </div>
+        
+      </div>
+    } @empty {
+      <p style="color: #666; font-style: italic">
+        No se encontraron películas que coincidan con la búsqueda.
+      </p>
+    }
+  </div>
+</div>
