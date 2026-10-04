@@ -13,6 +13,13 @@ interface Butaca {
   precio: number;
 }
 
+interface FilaEstructurada {
+  letra: string;
+  izquierdo: Butaca[];
+  centro: Butaca[];
+  derecho: Butaca[];
+}
+
 @Component({
   selector: 'app-sala',
   standalone: true,
@@ -23,7 +30,8 @@ interface Butaca {
 export class SalaComponent implements OnInit {
   filas = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T'];
   
-  mapaButacas: Butaca[] = [];
+  // Guardamos las filas ya separadas por bloque para evitar llamar a funciones en la vista
+  filasEstructuradas: FilaEstructurada[] = [];
   butacasSeleccionadas: Butaca[] = [];
   
   precioBase = 5000;
@@ -57,7 +65,7 @@ export class SalaComponent implements OnInit {
   }
 
   generarMapaBase() {
-    this.mapaButacas = [];
+    this.filasEstructuradas = [];
 
     for (const fila of this.filas) {
       const esAdaptada = (fila === 'J' || fila === 'K');
@@ -69,19 +77,36 @@ export class SalaComponent implements OnInit {
 
       let numeroActual = 1;
 
+      const bloqueIzq: Butaca[] = [];
+      const bloqueCentro: Butaca[] = [];
+      const bloqueDer: Butaca[] = [];
+
       for (let i = 0; i < cantIzq; i++) {
-        this.crearButaca(fila, numeroActual++, esAdaptada, esVip, 'izquierdo');
+        bloqueIzq.push(this.crearButaca(fila, numeroActual++, esAdaptada, esVip, 'izquierdo'));
       }
       for (let i = 0; i < cantCentro; i++) {
-        this.crearButaca(fila, numeroActual++, esAdaptada, esVip, 'centro');
+        bloqueCentro.push(this.crearButaca(fila, numeroActual++, esAdaptada, esVip, 'centro'));
       }
       for (let i = 0; i < cantDer; i++) {
-        this.crearButaca(fila, numeroActual++, esAdaptada, esVip, 'derecho');
+        bloqueDer.push(this.crearButaca(fila, numeroActual++, esAdaptada, esVip, 'derecho'));
       }
+
+      this.filasEstructuradas.push({
+        letra: fila,
+        izquierdo: bloqueIzq,
+        centro: bloqueCentro,
+        derecho: bloqueDer
+      });
     }
   }
 
-  private crearButaca(fila: string, numero: number, esAdaptada: boolean, esVip: boolean, bloque: 'izquierdo' | 'centro' | 'derecho') {
+  private crearButaca(
+    fila: string, 
+    numero: number, 
+    esAdaptada: boolean, 
+    esVip: boolean, 
+    bloque: 'izquierdo' | 'centro' | 'derecho'
+  ): Butaca {
     let tipo: 'estandar' | 'adaptada' | 'vip' = 'estandar';
     let precio = this.precioBase;
 
@@ -92,7 +117,7 @@ export class SalaComponent implements OnInit {
       precio = this.precioVip;
     }
 
-    this.mapaButacas.push({
+    return {
       fila,
       numero,
       tipo,
@@ -100,7 +125,7 @@ export class SalaComponent implements OnInit {
       ocupada: false,
       seleccionada: false,
       precio
-    });
+    };
   }
 
   async consultarButacasOcupadas() {
@@ -108,11 +133,13 @@ export class SalaComponent implements OnInit {
       const ocupadas = await this.peliculasService.obtenerButacasOcupadas(this.funcionId);
       
       if (ocupadas && ocupadas.length > 0) {
-        this.mapaButacas.forEach(b => {
-          const estaOcupada = ocupadas.some((o: any) => o.fila === b.fila && Number(o.numero) === b.numero);
-          if (estaOcupada) {
-            b.ocupada = true;
-          }
+        this.filasEstructuradas.forEach(f => {
+          [...f.izquierdo, ...f.centro, ...f.derecho].forEach(b => {
+            const estaOcupada = ocupadas.some((o: any) => o.fila === b.fila && Number(o.numero) === b.numero);
+            if (estaOcupada) {
+              b.ocupada = true;
+            }
+          });
         });
         this.cdr.detectChanges();
       }
@@ -121,14 +148,20 @@ export class SalaComponent implements OnInit {
     }
   }
 
-  getButacasBloque(fila: string, bloque: 'izquierdo' | 'centro' | 'derecho'): Butaca[] {
-    return this.mapaButacas.filter(b => b.fila === fila && b.bloque === bloque);
-  }
-
   toggleSeleccion(b: Butaca) {
     if (b.ocupada) return;
     b.seleccionada = !b.seleccionada;
-    this.butacasSeleccionadas = this.mapaButacas.filter(item => item.seleccionada);
+
+    // Recopilar butacas seleccionadas
+    this.butacasSeleccionadas = [];
+    this.filasEstructuradas.forEach(f => {
+      [...f.izquierdo, ...f.centro, ...f.derecho].forEach(item => {
+        if (item.seleccionada) {
+          this.butacasSeleccionadas.push(item);
+        }
+      });
+    });
+
     this.validarRestriccionEdad();
   }
 
@@ -140,7 +173,6 @@ export class SalaComponent implements OnInit {
     return this.butacasSeleccionadas.some(b => b.tipo === 'vip');
   }
 
-  // Comprueba la restricción de edad sin usar alerts
   private validarRestriccionEdad(): boolean {
     this.mensajeErrorEdad = '';
     const pelicula = this.funcionSeleccionada?.peliculas;
@@ -183,7 +215,6 @@ export class SalaComponent implements OnInit {
 
     if (!this.validarRestriccionEdad()) return;
 
-    // Guardar selección para el paso del Candy Bar y Pago
     localStorage.setItem('butacas_seleccionadas', JSON.stringify(this.butacasSeleccionadas));
     localStorage.setItem('total_entradas', this.totalPagar.toString());
 

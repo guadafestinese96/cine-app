@@ -1,0 +1,106 @@
+<div style="max-width: 900px; margin: 30px auto; padding: 20px;">
+  
+  <!-- DATOS DEL USUARIO Y CRÉDITO EN CUENTA (RF-19) -->
+  @if (usuario) {
+    <div style="background: #1a1a1a; color: white; padding: 20px; border-radius: 10px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+      <div>
+        <h2 style="margin: 0 0 5px 0; color: #f3c769;">👤 Mi Perfil</h2>
+        <p style="margin: 0; color: #ccc;">{{ usuario.nombre }} {{ usuario.apellido }} ({{ usuario.email }})</p>
+      </div>
+
+      <!-- CREDITO EN CUENTA -->
+      <div style="background: #28a745; padding: 10px 20px; border-radius: 8px; text-align: center;">
+        <span style="font-size: 0.85rem; text-transform: uppercase; font-weight: bold;">CRÉDITO DISPONIBLE</span>
+        <h3 style="margin: 0; font-size: 1.5rem;">${{ usuario.credito_cuenta || 0 }}</h3>
+      </div>
+    </div>
+  }
+
+  @if (mensajeCancelacion) {
+    <div style="padding: 12px; border-radius: 6px; margin-bottom: 20px; font-weight: bold;"
+         [style.background]="mensajeCancelacion.includes('❌') ? '#f8d7da' : '#d4edda'"
+         [style.color]="mensajeCancelacion.includes('❌') ? '#721c24' : '#155724'">
+      {{ mensajeCancelacion }}
+    </div>
+  }
+
+  <!-- RF-18: HISTORIAL "MIS PELÍCULAS" CON POSTERS, ESTRELLAS Y RESEÑA -->
+  <h3>🎬 Mis Películas & Entradas</h3>
+
+  <div style="display: flex; flex-direction: column; gap: 15px; margin-top: 15px;">
+    @for (item of historialCompras; track item.id) {
+      <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; background: white; display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap;"
+           [style.opacity]="item.cancelada ? '0.5' : '1'">
+        
+        <img [src]="item.imagen_url || 'https://via.placeholder.com/100x140?text=Pel%C3%ADcula'" 
+             [alt]="item.pelicula" 
+             style="width: 90px; height: 130px; object-fit: cover; border-radius: 6px;" />
+
+        <div style="flex: 1; min-width: 240px;">
+          <h4 style="margin: 0 0 6px 0; font-size: 1.2rem;">{{ item.pelicula }}</h4>
+          <p style="margin: 4px 0; color: #555; font-size: 0.9rem;">📍 {{ item.sala }}</p>
+          <p style="margin: 4px 0; color: #555; font-size: 0.9rem;">📅 {{ item.fecha_hora | date:'dd/MM/yyyy HH:mm' }}hs</p>
+          <p style="margin: 4px 0; font-size: 0.9rem;">
+            🎟️️ <strong>Asientos:</strong> {{ item.butacas ? item.butacas.join(', ') : 'Sin especificar' }}
+          </p>
+
+          <!-- RATING Y COMENTARIO -->
+          @if (!item.cancelada) {
+            <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 0.85rem; font-weight: bold;">Tu calificación:</span>
+                <div style="color: #ffc107; font-size: 1.3rem; cursor: pointer;">
+                  @for (star of [1, 2, 3, 4, 5]; track star) {
+                    <span (click)="calificar(item, star)">
+                      {{ (item.calificacion || 0) >= star ? '★' : '☆' }}
+                    </span>
+                  }
+                </div>
+              </div>
+
+              <!-- Campo de texto para redactar reseña -->
+              <div style="display: flex; gap: 8px; margin-top: 4px;">
+                <input 
+                  type="text" 
+                  [(ngModel)]="item.comentario" 
+                  placeholder="Escribí tu reseña u opinión sobre la película..." 
+                  style="flex: 1; padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.85rem;"
+                />
+                <button 
+                  (click)="guardarComentario(item)"
+                  style="padding: 6px 12px; background: #007bff; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.85rem;"
+                >
+                  Guardar
+                </button>
+              </div>
+            </div>
+          } @else {
+            <span style="background: #dc3545; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; display: inline-block; margin-top: 8px;">
+              CANCELADA
+            </span>
+          }
+        </div>
+
+        <!-- BOTÓN DE CANCELACIÓN DE RESERVA (RF-19) -->
+        <div>
+          @if (!item.cancelada) {
+            @if (puedeCancelar(item.fecha_hora)) {
+              <button (click)="cancelarCompra(item)" 
+                      style="padding: 8px 14px; background: #dc3545; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                ❌ Cancelar Reserva
+              </button>
+            } @else {
+              <small style="color: #777; font-style: italic; display: block; max-width: 140px; text-align: center;">
+                Cierre de cancelación (Menos de 2hs de la función)
+              </small>
+            }
+          }
+        </div>
+
+      </div>
+    } @empty {
+      <p style="color: #777; font-style: italic;">Aún no posees entradas registradas.</p>
+    }
+  </div>
+
+</div>

@@ -1,6 +1,6 @@
 <div style="padding: 20px; max-width: 1100px; margin: 0 auto">
   
-  <!-- SECCIÓN DESTACADA: TOP 3 PELÍCULAS MÁS VENDIDAS (RF-05) -->
+  <!-- SECCIÓN DESTACADA: TOP 3 PELÍCULAS MÁS VENDIDAS -->
   @if (topPeliculas && topPeliculas.length > 0) {
     <section style="margin-bottom: 35px; background: linear-gradient(135deg, #fff3cd 0%, #ffecb3 100%); padding: 20px; border-radius: 12px; border: 1px solid #ffeeba; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
       <h2 style="color: #856404; margin-top: 0; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
@@ -11,7 +11,6 @@
         @for (p of topPeliculas; track p.id; let i = $index) {
           <div style="flex: 1; min-width: 240px; max-width: 320px; background: #ffffff; padding: 15px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); display: flex; flex-direction: column; justify-content: space-between; position: relative;">
             
-            <!-- Badge de Posición #1, #2, #3 -->
             <span style="position: absolute; top: 10px; left: 10px; background: #e0a800; color: white; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 2;">
               #{{ i + 1 }}
             </span>
@@ -41,7 +40,7 @@
     </section>
   }
 
-  <!-- SECCIÓN PRÓXIMAMENTE (RF-06) -->
+  <!-- SECCIÓN PRÓXIMAMENTE -->
   @if (proximosEstrenos && proximosEstrenos.length > 0) {
     <section style="margin-bottom: 35px; background: #e3f2fd; padding: 20px; border-radius: 12px; border: 1px solid #90caf9;">
       <h2 style="color: #0d47a1; margin-top: 0; margin-bottom: 15px;">🚀 Próximamente en Cines</h2>
@@ -59,7 +58,6 @@
 
               <h3 style="margin: 5px 0; font-size: 1.1rem; color: #212529;">{{ p.nombre || p.titulo }}</h3>
               
-              <!-- SINOPSIS CON VER MÁS / VER MENOS EN PRÓXIMAMENTE -->
               <p style="font-size: 0.85rem; color: #555; margin: 4px 0; line-height: 1.4;">
                 @if (p.expandida) {
                   {{ p.sinopsis }}
@@ -96,7 +94,7 @@
 
   <h2>Películas en Cartelera</h2>
 
-  <!-- CONTROLES DE BÚSQUEDA Y FILTRO (RF-04) -->
+  <!-- CONTROLES DE BÚSQUEDA Y FILTRO -->
   <div class="buscador" style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap">
     <input
       type="text"
@@ -142,7 +140,6 @@
         "
       >
         <div>
-          <!-- Imagen del Póster -->
           <img
             [src]="p.imagen_url || 'https://via.placeholder.com/200x300?text=Sin+Imagen'"
             [alt]="p.nombre || p.titulo"
@@ -151,7 +148,6 @@
 
           <h3 style="margin: 10px 0 5px 0">{{ p.nombre || p.titulo }}</h3>
 
-          <!-- SINOPSIS CON VER MÁS / VER MENOS EN CARTELERA -->
           <p style="font-size: 0.85rem; color: #555; margin: 5px 0; line-height: 1.4;">
             @if (p.expandida) {
               {{ p.sinopsis }}
@@ -190,7 +186,7 @@
           }
         </div>
 
-        <!-- FUNCIONES PROGRAMADAS DE ESTA PELÍCULA -->
+        <!-- FUNCIONES PROGRAMADAS -->
         <div style="border-top: 1px solid #eee; padding-top: 10px; margin-top: 10px">
           <h4 style="margin: 5px 0; font-size: 0.95rem">Horarios disponibles:</h4>
 
@@ -221,9 +217,21 @@
           </div>
         </div>
 
-        <div style="display: flex; justify-content: space-between; align-items:center; margin-top: 12px; border-top: 1px solid #eee; padding-top: 8px;">
-          <p style="margin: 0; font-size: 0.85rem;">Estrellas</p>
-          <button type="submit" style="width: 50%; padding: 8px; background: #020202; color: white; border: none; border-radius: 4px; cursor: pointer;" disabled=""> Ver Reseñas </button>
+        <!-- ESTRELLAS Y BOTÓN DE RESEÑAS -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; border-top: 1px solid #eee; padding-top: 8px;">
+          <div style="color: #ffc107; font-size: 1.1rem;" [title]="p.rating > 0 ? 'Calificación: ' + p.rating + '/5' : 'Sin puntuación'">
+            @for (star of [1, 2, 3, 4, 5]; track star) {
+              <span>{{ (p.rating || 0) >= star ? '★' : '☆' }}</span>
+            }
+          </div>
+
+          <button 
+            type="button" 
+            (click)="verResenas(p)"
+            style="padding: 6px 12px; background: #020202; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold;"
+          >
+            Ver Reseñas
+          </button>
         </div>
         
       </div>
@@ -233,4 +241,96 @@
       </p>
     }
   </div>
+
+  <!-- MODAL DE NOTIFICACIÓN DE ALERTA DE ESTRENO -->
+  @if (mostrarModalAlerta) {
+    <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1100;">
+      <div style="background: white; border-radius: 12px; padding: 25px; max-width: 420px; width: 90%; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.2); border: 1px solid #ddd;">
+        
+        <div style="font-size: 2.5rem; margin-bottom: 10px;">🔔</div>
+        
+        <h3 style="margin: 0 0 10px 0; color: #212529;">Notificación</h3>
+        
+        <p style="font-size: 0.95rem; color: #555; margin-bottom: 20px; line-height: 1.4;">
+          {{ mensajeModalAlerta }}
+        </p>
+
+        <button 
+          type="button" 
+          (click)="cerrarModalAlerta()"
+          style="padding: 10px 24px; background: #007bff; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.95rem;"
+        >
+          Aceptar
+        </button>
+
+      </div>
+    </div>
+  }
+
+  <!-- MODAL INTERACTIVO PARA VER Y ESCRIBIR RESEÑAS -->
+  @if (mostrarModalResenas) {
+    <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+      <div style="background: white; width: 90%; max-width: 500px; padding: 25px; border-radius: 10px; max-height: 85vh; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 10px;">
+          <h3 style="margin: 0;">💬 Reseñas: {{ peliculaSeleccionadaModal?.nombre || peliculaSeleccionadaModal?.titulo }}</h3>
+          <button (click)="cerrarModalResenas()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+        </div>
+
+        <!-- FORMULARIO PARA ESCRIBIR NUEVA RESEÑA -->
+        <div style="margin: 15px 0; background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #e9ecef;">
+          <h4 style="margin: 0 0 8px 0; font-size: 0.95rem;">Escribir una reseña</h4>
+          
+          <div style="margin-bottom: 8px;">
+            <label style="font-size: 0.85rem; font-weight: bold;">Tu puntuación: </label>
+            <select [(ngModel)]="nuevaResenaEstrellas" style="padding: 4px; border-radius: 4px; border: 1px solid #ccc; font-weight: bold;">
+              <option [ngValue]="5">⭐⭐⭐⭐⭐ (5/5)</option>
+              <option [ngValue]="4">⭐⭐⭐⭐☆ (4/5)</option>
+              <option [ngValue]="3">⭐⭐⭐☆☆ (3/5)</option>
+              <option [ngValue]="2">⭐⭐☆☆☆ (2/5)</option>
+              <option [ngValue]="1">⭐☆☆☆☆ (1/5)</option>
+            </select>
+          </div>
+
+          <textarea 
+            [(ngModel)]="nuevaResenaTexto" 
+            placeholder="¿Qué te pareció la película?" 
+            rows="3" 
+            style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;"
+          ></textarea>
+
+          <button 
+            (click)="agregarResena()" 
+            [disabled]="!nuevaResenaTexto.trim()"
+            style="margin-top: 8px; width: 100%; padding: 8px; background: #28a745; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;"
+          >
+            Publicar Reseña
+          </button>
+        </div>
+
+        <!-- LISTA DE RESEÑAS PUBLICADAS -->
+        <div>
+          <h4 style="margin: 15px 0 10px 0;">Opiniones de los espectadores:</h4>
+          @for (r of resenasModal; track r.fecha) {
+            <div style="border-bottom: 1px solid #eee; padding: 8px 0;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <strong>{{ r.autor }}</strong>
+                <span style="color: #ffc107;">
+                  @for (star of [1, 2, 3, 4, 5]; track star) {
+                    <span>{{ r.estrellas >= star ? '★' : '☆' }}</span>
+                  }
+                </span>
+              </div>
+              <p style="margin: 4px 0 0 0; font-size: 0.9rem; color: #444;">{{ r.comentario }}</p>
+              <small style="color: #888; font-size: 0.75rem;">{{ r.fecha | date:'dd/MM/yyyy HH:mm' }}</small>
+            </div>
+          } @empty {
+            <p style="color: #777; font-style: italic; font-size: 0.9rem;">Aún no hay reseñas para esta película. ¡Sé el primero en dejar la tuya!</p>
+          }
+        </div>
+
+      </div>
+    </div>
+  }
+
 </div>

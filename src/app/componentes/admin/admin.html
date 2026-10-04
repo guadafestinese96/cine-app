@@ -59,7 +59,7 @@
     }
   </div>
 
-  <!-- 2. Programar Función -->
+  <!-- 2. Programar Función (RF-08: Con Asignación Automática de Sala) -->
   <div style="flex: 1; min-width: 300px; max-width: 400px; padding: 20px; border: 1px solid #ccc; border-radius: 8px;">
     <h2>2. Programar Función</h2>
     <form [formGroup]="formFuncion" (ngSubmit)="guardarFuncion()">
@@ -89,9 +89,9 @@
       }
 
       <div>
-        <label>Sala:</label>
+        <label>Sala (Opcional - Asignación automática por defecto):</label>
         <select formControlName="sala_id" style="width: 100%; margin-bottom: 10px; padding: 6px;">
-          <option value="">Seleccionar sala</option>
+          <option value="">⚡ Asignar sala automáticamente</option>
           @for (s of salas; track s.id) {
             <option [value]="s.id">{{ s.nombre }}</option>
           }

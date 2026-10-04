@@ -27,15 +27,15 @@
     PANTALLA
   </div>
 
-  <!-- GRILLA DE BUTACAS DIVIDIDA EN 3 BLOQUES CON PASILLOS (RF-09) -->
+  <!-- GRILLA DE BUTACAS DIVIDIDA EN 3 BLOQUES CON PASILLOS -->
   <div style="display: flex; flex-direction: column; gap: 8px; align-items: center; margin-bottom: 30px; overflow-x: auto; max-width: 100%;">
-    @for (f of filas; track f) {
+    @for (f of filasEstructuradas; track f.letra) {
       <div style="display: flex; gap: 20px; align-items: center;">
-        <strong style="width: 20px; text-align: right;">{{ f }}</strong>
+        <strong style="width: 20px; text-align: right;">{{ f.letra }}</strong>
 
         <!-- BLOQUE IZQUIERDO -->
         <div style="display: flex; gap: 4px;">
-          @for (b of getButacasBloque(f, 'izquierdo'); track b.fila + b.numero) {
+          @for (b of f.izquierdo; track b.fila + b.numero) {
             <button 
               (click)="toggleSeleccion(b)"
               [disabled]="b.ocupada"
@@ -51,7 +51,7 @@
 
         <!-- BLOQUE CENTRAL -->
         <div style="display: flex; gap: 4px;">
-          @for (b of getButacasBloque(f, 'centro'); track b.fila + b.numero) {
+          @for (b of f.centro; track b.fila + b.numero) {
             <button 
               (click)="toggleSeleccion(b)"
               [disabled]="b.ocupada"
@@ -67,7 +67,7 @@
 
         <!-- BLOQUE DERECHO -->
         <div style="display: flex; gap: 4px;">
-          @for (b of getButacasBloque(f, 'derecho'); track b.fila + b.numero) {
+          @for (b of f.derecho; track b.fila + b.numero) {
             <button 
               (click)="toggleSeleccion(b)"
               [disabled]="b.ocupada"
@@ -78,7 +78,7 @@
           }
         </div>
 
-        <strong style="width: 20px; text-align: left;">{{ f }}</strong>
+        <strong style="width: 20px; text-align: left;">{{ f.letra }}</strong>
       </div>
     }
   </div>
@@ -98,7 +98,6 @@
       }
     </p>
 
-    <!-- TARJETA INFORMATIVA VIP EN LUGAR DE ALERT -->
     @if (tieneButacasVip) {
       <div style="background: #fff3cd; color: #856404; padding: 10px; border-radius: 6px; margin: 12px 0; font-size: 0.88rem; border: 1px solid #ffeeba; display: flex; align-items: center; gap: 8px;">
         <span style="font-size: 1.2rem;">⭐</span>
@@ -109,7 +108,6 @@
       </div>
     }
 
-    <!-- ALERTA DE EDAD SI NO CUMPLE -->
     @if (mensajeErrorEdad) {
       <div style="background: #f8d7da; color: #721c24; padding: 10px; border-radius: 6px; margin: 12px 0; font-size: 0.88rem; border: 1px solid #f5c6cb;">
         {{ mensajeErrorEdad }}

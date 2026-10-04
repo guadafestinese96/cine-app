@@ -53,7 +53,7 @@ export class AdminComponent implements OnInit {
 
     this.formFuncion = this.fb.group({
       pelicula_id: ['', Validators.required],
-      sala_id: ['', Validators.required],
+      sala_id: [''], // Opcional para permitir la asignación automática (RF-08)
       fecha_hora: ['', Validators.required],
       formato: ['2D', Validators.required],
       idioma: ['Castellano', Validators.required]
@@ -256,6 +256,7 @@ export class AdminComponent implements OnInit {
     }
   }
 
+  // RF-08: PROGRAMACIÓN Y ASIGNACIÓN AUTOMÁTICA DE SALAS
   async guardarFuncion() {
     if (this.formFuncion.invalid) return;
 
@@ -265,57 +266,112 @@ export class AdminComponent implements OnInit {
       console.error('Error al actualizar funciones antes de validar:', e);
     }
 
-    const { pelicula_id, sala_id, fecha_hora } = this.formFuncion.value;
+    const { pelicula_id, sala_id, fecha_hora, formato, idioma } = this.formFuncion.value;
 
     const peliculaElegida = this.peliculas.find(p => Number(p.id) === Number(pelicula_id));
     const duracionPelicula = Number(peliculaElegida?.duracion_minutos || peliculaElegida?.duracion || 120);
 
     const fechaLimpiaNueva = fecha_hora.replace('Z', '').replace('+00:00', '');
     const inicioNueva = new Date(fechaLimpiaNueva).getTime();
+    // Duración de la película + 30 minutos de descanso/limpieza
     const finNueva = inicioNueva + (duracionPelicula + 30) * 60 * 1000;
 
-    const funcionesDeMismaSala = this.funciones.filter(f => Number(f.sala_id) === Number(sala_id));
+    let salaIdFinal: number | null = sala_id ? Number(sala_id) : null;
 
-    let haySolapamiento = false;
+    // Si el usuario especificó una sala en el formulario, validamos su disponibilidad
+    if (salaIdFinal) {
+      const funcionesDeMismaSala = this.funciones.filter(f => Number(f.sala_id) === salaIdFinal);
 
-    for (const f of funcionesDeMismaSala) {
-      if (!f.fecha_hora) continue;
+      for (const f of funcionesDeMismaSala) {
+        if (!f.fecha_hora) continue;
 
-      const fechaLimpiaExistente = String(f.fecha_hora).split('+')[0].replace('Z', '');
-      const inicioExistente = new Date(fechaLimpiaExistente).getTime();
+        const fechaLimpiaExistente = String(f.fecha_hora).split('+')[0].replace('Z', '');
+        const inicioExistente = new Date(fechaLimpiaExistente).getTime();
 
-      if (isNaN(inicioExistente)) continue;
+        if (isNaN(inicioExistente)) continue;
 
-      let duracionExistente = 120;
-      if (f.peliculas && (f.peliculas.duracion_minutos || f.peliculas.duracion)) {
-        duracionExistente = Number(f.peliculas.duracion_minutos || f.peliculas.duracion);
-      } else {
-        const peliRel = this.peliculas.find(p => Number(p.id) === Number(f.pelicula_id));
-        if (peliRel) {
-          duracionExistente = Number(peliRel.duracion_minutos || peliRel.duracion || 120);
+        let duracionExistente = 120;
+        if (f.peliculas && (f.peliculas.duracion_minutos || f.peliculas.duracion)) {
+          duracionExistente = Number(f.peliculas.duracion_minutos || f.peliculas.duracion);
+        } else {
+          const peliRel = this.peliculas.find(p => Number(p.id) === Number(f.pelicula_id));
+          if (peliRel) {
+            duracionExistente = Number(peliRel.duracion_minutos || peliRel.duracion || 120);
+          }
+        }
+
+        const finExistente = inicioExistente + (duracionExistente + 30) * 60 * 1000;
+
+        if (inicioNueva < finExistente && finNueva > inicioExistente) {
+          this.mensajeFuncion = '❌ Error: La sala seleccionada ya está ocupada en ese horario (debe haber al menos 30 min de descanso entre funciones).';
+          this.cdr.detectChanges();
+          return;
+        }
+      }
+    } else {
+      // RF-08: Asignación automática de sala sin superposición
+      for (const sala of this.salas) {
+        const idSalaEvaluar = Number(sala.id);
+        const funcionesDeEstaSala = this.funciones.filter(f => Number(f.sala_id) === idSalaEvaluar);
+
+        let tieneConflicto = false;
+
+        for (const f of funcionesDeEstaSala) {
+          if (!f.fecha_hora) continue;
+
+          const fechaLimpiaExistente = String(f.fecha_hora).split('+')[0].replace('Z', '');
+          const inicioExistente = new Date(fechaLimpiaExistente).getTime();
+
+          if (isNaN(inicioExistente)) continue;
+
+          let duracionExistente = 120;
+          if (f.peliculas && (f.peliculas.duracion_minutos || f.peliculas.duracion)) {
+            duracionExistente = Number(f.peliculas.duracion_minutos || f.peliculas.duracion);
+          } else {
+            const peliRel = this.peliculas.find(p => Number(p.id) === Number(f.pelicula_id));
+            if (peliRel) {
+              duracionExistente = Number(peliRel.duracion_minutos || peliRel.duracion || 120);
+            }
+          }
+
+          const finExistente = inicioExistente + (duracionExistente + 30) * 60 * 1000;
+
+          if (inicioNueva < finExistente && finNueva > inicioExistente) {
+            tieneConflicto = true;
+            break;
+          }
+        }
+
+        if (!tieneConflicto) {
+          salaIdFinal = idSalaEvaluar;
+          break; // Se encontró la primera sala disponible
         }
       }
 
-      const finExistente = inicioExistente + (duracionExistente + 30) * 60 * 1000;
-
-      if (inicioNueva < finExistente && finNueva > inicioExistente) {
-        haySolapamiento = true;
-        break;
+      if (!salaIdFinal) {
+        this.mensajeFuncion = '❌ Error: No hay ninguna sala disponible en ese horario considerando los 30 min de limpieza/descanso.';
+        this.cdr.detectChanges();
+        return;
       }
     }
 
-    if (haySolapamiento) {
-      this.mensajeFuncion = '❌ Error: La sala ya está ocupada en ese horario. Debe haber al menos la duración de la película + 30 min entre funciones.';
-      this.cdr.detectChanges();
-      return;
-    }
-
     try {
-      await this.peliculasService.guardarFuncion(this.formFuncion.value);
-      this.mensajeFuncion = '¡Función programada con éxito!';
+      const funcionAGuardar = {
+        pelicula_id: Number(pelicula_id),
+        sala_id: salaIdFinal,
+        fecha_hora: fecha_hora,
+        formato: formato,
+        idioma: idioma
+      };
+
+      await this.peliculasService.guardarFuncion(funcionAGuardar);
+      
+      const nombreSalaAsignada = this.salas.find(s => Number(s.id) === salaIdFinal)?.nombre || `Sala #${salaIdFinal}`;
+      this.mensajeFuncion = `¡Función programada con éxito en ${nombreSalaAsignada}!`;
 
       this.formFuncion.reset({ 
         pelicula_id: pelicula_id, 
+        sala_id: '',
         formato: '2D', 
         idioma: 'Castellano' 
       });
