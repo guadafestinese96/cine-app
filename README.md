@@ -1,66 +1,72 @@
-<<<<<<< HEAD
-# CineApp
+# 🎬 CineWidi - Sistema de Gestión de Cine & Entradas
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.1.8.
+**CineWidi** es una aplicación desarrollada en **Angular** y **Supabase** para la gestión integral de un complejo de cines. El proyecto permite a los usuarios consultar cartelera, comprar entradas con selección de asientos en tiempo real, adquirir productos del Candy Bar, acumular puntos de fidelización, cancelar reservas y acceder a paneles diferenciados según su rol (Cliente / Administrador).
 
-## Development server
+Proyecto desarrollado para la **Tecnicatura Universitaria en Programación (UTN FRA)**.
 
-To start a local development server, run:
+---
 
-```bash
-ng serve
-```
+## 🚀 Características Principales
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+### 👤 Autenticación y Control de Acceso
+* **Login y Registro de Usuarios:** Manejo de estado global de sesión mediante **Angular Signals** y `AuthService`.
+* **Protección de Rutas (Guards):**
+  * `authGuard`: Restringe el acceso a `/perfil` a usuarios no autenticados.
+  * `adminGuard`: Restringe la ruta `/admin` exclusivamente a usuarios con rol `admin`, redirigiendo a los clientes a `/catalogo`.
+* **Persistencia:** Mantenimiento de sesión y preferencias del usuario mediante `localStorage`.
 
-## Code scaffolding
+### 🎟️ Cartelera, Reservas y Tickets
+* **Cartelera Dinámica:** Filtro de películas por nombre y género.
+* **Preventa Exclusiva:** Sección destacada para películas con venta anticipada de entradas.
+* **Selección de Butacas:** Interfaz interactiva de sala para elección de asientos.
+* **Generación de Ticket PDF con QR:** Emisión de comprobantes digitales de compra con código QR para validación.
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+### 🍿 Candy Bar & Descuentos
+* **Tienda de Combos:** Selección y agregado de alimentos/bebidas al carrito.
+* **Cupones de Descuento:** Soporte para descuentos de bienvenida (20%) y beneficios por rango de edad (ej. `MAYOR50`).
 
-```bash
-ng generate component component-name
-```
+### ⭐ Programa de Fidelización (RF-24)
+* **Acumulación de Puntos:** $1 gastado = 1 punto acumulado automáticamente.
+* **Canje de Premios:** Panel en la vista de perfil para canjear puntos acumulados por productos del Candy Bar o entradas gratis.
+* **Historial de Canjes:** Registro detallado con código de cupón, puntos consumidos y fecha.
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+### 💵 Cancelación de Reservas y Crédito (RF-19)
+* **Reembolso a Saldo en Cuenta:** Permite cancelar funciones con hasta 2 horas de anticipación.
+* El monto reembolsado se acredita en la cuenta del usuario para futuras compras.
 
-```bash
-ng generate --help
-```
 
-## Building
+## 🛠️ Tecnologías Utilizadas
 
-To build the project run:
+* **Frontend:** Angular (Standalone Components, Signals, Router, Guards)
+* **Estilos:** CSS3 / Flexbox / FontAwesome
+* **Backend / Base de Datos:** Supabase
+* **PWA:** `@angular/service-worker` & Web App Manifest
+* **Librerías Adicionales:** `jspdf` / `qrcode` / `rxjs`
 
-```bash
-ng build
-```
+---
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+## 📁 Estructura del Proyecto
 
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
-
-npm install html2pdf.js Librería para descargar PDF 
-=======
-# cine-app
-Aplicación Web desarrollada en Angular para el primer parcial de Programación 4 en UTN
->>>>>>> 175554e2bb61fb386a82c73ce9b363590e965848
+```text
+src/
+├── app/
+│   ├── componentes/
+│   │   ├── admin/           # Panel de administración de películas y funciones
+│   │   ├── candy/           # Menú y compra de Candy Bar
+│   │   ├── catalogo/        # Cartelera, buscador, preventa y top más vendidas
+│   │   ├── login/           # Formulario de inicio de sesión
+│   │   ├── navbar/          # Navegación y menú desplegable de usuario
+│   │   ├── perfil/          # Panel personal, crédito, fidelización y reseñas
+│   │   ├── registro/        # Registro de nuevos usuarios
+│   │   ├── sala/            # Selección de butacas e interactividad
+│   │   └── ticket/          # Resumen de compra, generación de QR y PDF
+│   ├── guards/
+│   │   ├── admin.guard.ts   # Control de acceso solo admin
+│   │   └── auth.guard.ts    # Control de acceso a usuarios logueados
+│   ├── services/
+│   │   ├── auth.ts          # Servicio de autenticación con Signals
+│   │   └── peliculas.ts     # Servicio de datos de películas y funciones
+│   ├── app.routes.ts        # Definición de rutas de la aplicación
+│   └── app.config.ts        # Configuración principal y Service Worker PWA
+├── manifest.webmanifest     # Archivo de configuración PWA
+└── ngsw-config.json         # Configuración del Service Worker de Angular
