@@ -43,7 +43,6 @@ export class TicketComponent implements OnInit {
     this.cargarLibreriaPDF();
   }
 
-  // Carga dinámica de html2pdf
   cargarLibreriaPDF() {
     if (typeof html2pdf === 'undefined') {
       const script = document.createElement('script');
@@ -71,7 +70,6 @@ export class TicketComponent implements OnInit {
     this.subtotalEntradas = this.butacasSeleccionadas.reduce((acc, b) => acc + Number(b.precio), 0);
     this.subtotalCandy = this.carritoCandy.reduce((acc, c) => acc + (Number(c.producto.precio) * Number(c.cantidad)), 0);
 
-    // Recuperar si se aplicó un descuento previo en Candy
     const descPrevio = localStorage.getItem('descuento_aplicado');
     if (descPrevio) {
       this.porcentajeDescuento = Number(descPrevio);
@@ -83,18 +81,23 @@ export class TicketComponent implements OnInit {
     if (usrStorage) {
       try {
         this.usuarioLogueado = JSON.parse(usrStorage);
-        // RF-14: Aplicar 20% automático si es la primera compra y no ingresó otro cupón previamente
+        
+        // RF-14: Aplicar 20% automático si es la primera compra y no tenía descuento previo seleccionado
         if (this.usuarioLogueado && !this.usuarioLogueado.primer_compra_realizada && this.porcentajeDescuento === 0) {
           this.porcentajeDescuento = 20;
-          this.mensajeCupon = '🎉 ¡Aprovecha tu 20% de descuento automático de Bienvenida!';
+          this.mensajeCupon = '🎉 ¡Se aplicó automáticamente tu 20% de descuento de Bienvenida por primera compra!';
+          localStorage.setItem('descuento_aplicado', '20');
         }
       } catch (e) {
         console.error('Error al leer datos del usuario:', e);
       }
+    } else {
+      // Si es anónimo, borramos cualquier descuento acumulado
+      this.porcentajeDescuento = 0;
+      localStorage.removeItem('descuento_aplicado');
     }
   }
 
-  // RF-14 y RF-15: Validación manual de cupones
   aplicarCuponManual() {
     const cupon = this.codigoCuponInput.trim().toUpperCase();
     if (!cupon) return;
@@ -103,19 +106,21 @@ export class TicketComponent implements OnInit {
       const cuponesUsados = JSON.parse(localStorage.getItem('cupones_bienvenida_usados') || '[]');
       const idUsuario = this.usuarioLogueado?.email || 'anonimo';
 
-      if (cuponesUsados.includes(idUsuario)) {
+      if (cuponesUsados.includes(idUsuario) || this.usuarioLogueado?.primer_compra_realizada) {
         this.mensajeCupon = '❌ Ya has utilizado tu cupón de bienvenida anteriormente.';
         return;
       }
 
       this.porcentajeDescuento = 20;
       this.mensajeCupon = '✅ Cupón de Bienvenida (20% OFF) aplicado.';
+      localStorage.setItem('descuento_aplicado', '20');
     } else if (cupon === 'MAYOR50') {
       if (this.usuarioLogueado && this.usuarioLogueado.fecha_nacimiento) {
         const edad = this.calcularEdad(this.usuarioLogueado.fecha_nacimiento);
         if (edad >= 50) {
           this.porcentajeDescuento = 25;
           this.mensajeCupon = '✅ Cupón Senior Mayores de 50 años (25% OFF) aplicado.';
+          localStorage.setItem('descuento_aplicado', '25');
         } else {
           this.mensajeCupon = '❌ Este cupón es exclusivo para clientes mayores de 50 años.';
         }
@@ -159,19 +164,16 @@ export class TicketComponent implements OnInit {
     this.codigoQR = idUnico;
 
     try {
-      // 1. Guardar en Supabase las butacas ocupadas
       await this.peliculasService.guardarCompra({
         funcion_id: this.funcionSeleccionada.id,
         butacas: this.butacasSeleccionadas
       });
 
-      // 2. Marcar que la primera compra ya fue realizada
       if (this.usuarioLogueado) {
         this.usuarioLogueado.primer_compra_realizada = true;
         localStorage.setItem('usuario_logueado', JSON.stringify(this.usuarioLogueado));
       }
 
-      // 3. Registrar la compra en el historial de localStorage (para RF-18 y RF-19)
       const nuevaCompra = {
         id: this.codigoQR,
         pelicula: this.funcionSeleccionada?.peliculas?.nombre || this.funcionSeleccionada?.peliculas?.titulo,
@@ -187,7 +189,6 @@ export class TicketComponent implements OnInit {
       historialExistente.unshift(nuevaCompra);
       localStorage.setItem('historial_compras', JSON.stringify(historialExistente));
 
-      // 4. Limpiar datos temporales del flujo de compra
       localStorage.removeItem('carrito_candy');
       localStorage.removeItem('descuento_aplicado');
       
@@ -218,12 +219,7 @@ export class TicketComponent implements OnInit {
       margin: 10,
       filename: `Ticket_Cine_${this.codigoQR}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { 
-        scale: 2, 
-        useCORS: true, 
-        letterRendering: true,
-        scrollY: 0 
-      },
+      html2canvas: { scale: 2, useCORS: true, letterRendering: true, scrollY: 0 },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 

@@ -31,20 +31,28 @@
       routerLink="/catalogo"
       routerLinkActive="active"
       style="color: white; text-decoration: none; padding: 5px 10px"
-      >Cartelera</a
     >
-    <a
-      routerLink="/admin"
-      routerLinkActive="active"
-      style="color: white; text-decoration: none; padding: 5px 10px"
-      >Admin</a
-    >
+      Cartelera
+    </a>
+
+    <!-- PESTAÑA ADMIN SOLO VISIBLE PARA EL ADMINISTRADOR -->
+    @if (esAdmin) {
+      <a
+        routerLink="/admin"
+        routerLinkActive="active"
+        style="color: #f3c769; text-decoration: none; padding: 5px 10px; font-weight: bold;"
+      >
+        Admin
+      </a>
+    }
+
     <a
       routerLink="/candy"
       routerLinkActive="active"
       style="color: white; text-decoration: none; padding: 5px 10px"
-      >Candy Bar</a
     >
+      Candy Bar
+    </a>
   </div>
 
   <!-- SECCIÓN DE LOGIN / USUARIO -->
@@ -123,6 +131,13 @@
       <a routerLink="/perfil" class="sidebar-link" (click)="toggleMenu()">
         <i class="fa-solid fa-id-card"></i> Mi Perfil
       </a>
+
+      <!-- OPCIÓN DE ACCESO RÁPIDO AL PANEL EN EL MENÚ LATERAL PARA EL ADMIN -->
+      @if (esAdmin) {
+        <a routerLink="/admin" class="sidebar-link" (click)="toggleMenu()" style="color: #f3c769;">
+          <i class="fa-solid fa-user-gear"></i> Panel de Administración
+        </a>
+      }
 
       <button class="logout-btn" (click)="cerrarSesion()">
         <i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión

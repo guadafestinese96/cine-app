@@ -42,6 +42,16 @@ export class NavbarComponent implements OnInit {
     this.cdr.detectChanges();
   }
 
+  // Comprueba si el usuario en sesión es administrador
+  get esAdmin(): boolean {
+    if (!this.usuarioLogueado) return false;
+    return (
+      this.usuarioLogueado.rol === 'admin' ||
+      this.usuarioLogueado.es_admin === true ||
+      this.usuarioLogueado.email === 'admin@cineapp.com'
+    );
+  }
+
   toggleMenu() {
     this.isMenuOpen = !this.isMenuOpen;
   }

@@ -15,7 +15,8 @@ export class CandyComponent implements OnInit {
   productos: ProductoCandy[] = [];
   carritoCandy: { producto: ProductoCandy; cantidad: number }[] = [];
 
-  // Variables para la lógica de cupones (RF-14 y RF-15)
+  usuarioLogueado: any = null;
+
   codigoCupon: string = '';
   porcentajeDescuento: number = 0;
   mensajeCuponError: string = '';
@@ -28,6 +29,15 @@ export class CandyComponent implements OnInit {
   ) {}
 
   async ngOnInit() {
+    const usr = localStorage.getItem('usuario_logueado');
+    if (usr) {
+      try {
+        this.usuarioLogueado = JSON.parse(usr);
+      } catch (e) {
+        this.usuarioLogueado = null;
+      }
+    }
+
     this.recuperarCarritoExistente();
     await this.cargarProductos();
   }
@@ -42,9 +52,8 @@ export class CandyComponent implements OnInit {
       }
     }
 
-    // Recuperar descuento previamente aplicado si existe
     const descuentoGuardado = localStorage.getItem('descuento_aplicado');
-    if (descuentoGuardado) {
+    if (descuentoGuardado && this.usuarioLogueado) {
       this.porcentajeDescuento = Number(descuentoGuardado);
     }
   }
@@ -81,7 +90,6 @@ export class CandyComponent implements OnInit {
     this.guardarTemporal();
   }
 
-  // Acepta el objeto ProductoCandy completo para evitar errores de type 'number | undefined'
   getCantidad(prod: ProductoCandy): number {
     if (!prod || prod.id === undefined) return 0;
     const item = this.carritoCandy.find(c => c.producto.id === prod.id);
@@ -100,27 +108,27 @@ export class CandyComponent implements OnInit {
     return this.subtotalCandy - this.montoDescuento;
   }
 
-  // RF-14 y RF-15: Lógica de Cupones
   aplicarCupon() {
     this.mensajeCuponError = '';
     this.mensajeCuponExito = '';
 
-    const usrStorage = localStorage.getItem('usuario_logueado');
-    const usuario = usrStorage ? JSON.parse(usrStorage) : null;
-    const idUsuario = usuario?.email || usuario?.id || 'anonimo';
+    if (!this.usuarioLogueado) {
+      this.mensajeCuponError = 'Debes estar registrado para aplicar cupones.';
+      return;
+    }
 
+    const idUsuario = this.usuarioLogueado.email || this.usuarioLogueado.id || 'anonimo';
     const cuponIngresado = this.codigoCupon.trim().toUpperCase();
 
-    // RF-14: Cupón de bienvenida (20% por defecto)
     if (cuponIngresado === 'BIENVENIDA' || cuponIngresado === 'BIENVENIDA20') {
       const cuponesUsados = JSON.parse(localStorage.getItem('cupones_bienvenida_usados') || '[]');
 
-      if (cuponesUsados.includes(idUsuario)) {
+      if (cuponesUsados.includes(idUsuario) || this.usuarioLogueado.primer_compra_realizada) {
         this.mensajeCuponError = 'Ya has utilizado tu cupón de bienvenida anteriormente.';
         return;
       }
 
-      this.porcentajeDescuento = 20; // 20% por consigna RF-14
+      this.porcentajeDescuento = 20;
       this.mensajeCuponExito = '¡Cupón de bienvenida del 20% aplicado con éxito!';
 
       cuponesUsados.push(idUsuario);
@@ -129,15 +137,14 @@ export class CandyComponent implements OnInit {
       return;
     }
 
-    // RF-15: Cupón segmentado para mayores de 50 años
     if (cuponIngresado === 'MAYOR50') {
-      if (!usuario || !usuario.fecha_nacimiento) {
-        this.mensajeCuponError = 'Debes estar registrado y tener tu fecha de nacimiento en el perfil para usar este cupón.';
+      if (!this.usuarioLogueado.fecha_nacimiento) {
+        this.mensajeCuponError = 'Debes tener tu fecha de nacimiento registrada en tu perfil para usar este cupón.';
         return;
       }
 
       const hoy = new Date();
-      const nac = new Date(usuario.fecha_nacimiento);
+      const nac = new Date(this.usuarioLogueado.fecha_nacimiento);
       let edad = hoy.getFullYear() - nac.getFullYear();
       const m = hoy.getMonth() - nac.getMonth();
       if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) edad--;
@@ -147,7 +154,7 @@ export class CandyComponent implements OnInit {
         return;
       }
 
-      this.porcentajeDescuento = 25; // Descuento exclusivo Senior
+      this.porcentajeDescuento = 25;
       this.mensajeCuponExito = '¡Cupón Senior (+50 años) del 25% aplicado con éxito!';
       localStorage.setItem('descuento_aplicado', '25');
       return;

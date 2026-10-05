@@ -29,30 +29,32 @@
 
   </div>
 
-  <!-- SECCIÓN PARA INGRESAR EL CUPÓN DE DESCUENTO (RF-14 / RF-15) -->
-  <div style="margin-top: 25px; padding: 15px; border: 1px dashed #007bff; border-radius: 8px; background: #f8f9fa;">
-    <h4 style="margin: 0 0 10px 0; color: #007bff;">🎫 ¿Tenés un cupón de descuento?</h4>
-    <div style="display: flex; gap: 10px; align-items: center;">
-      <input 
-        type="text" 
-        [(ngModel)]="codigoCupon" 
-        placeholder="Ej: BIENVENIDA20 o MAYOR50" 
-        style="padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; text-transform: uppercase; font-weight: bold;"
-      />
-      <button 
-        (click)="aplicarCupon()" 
-        style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
-        Aplicar Cupón
-      </button>
-    </div>
+  <!-- SECCIÓN PARA INGRESAR EL CUPÓN DE DESCUENTO (SOLO VISIBLE SI EL USUARIO ESTÁ LOGUEADO) -->
+  @if (usuarioLogueado) {
+    <div style="margin-top: 25px; padding: 15px; border: 1px dashed #007bff; border-radius: 8px; background: #f8f9fa;">
+      <h4 style="margin: 0 0 10px 0; color: #007bff;">🎫 ¿Tenés un cupón de descuento?</h4>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <input 
+          type="text" 
+          [(ngModel)]="codigoCupon" 
+          placeholder="Ej: MAYOR50" 
+          style="padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; text-transform: uppercase; font-weight: bold;"
+        />
+        <button 
+          (click)="aplicarCupon()" 
+          style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+          Aplicar Cupón
+        </button>
+      </div>
 
-    @if (mensajeCuponExito) {
-      <p style="color: #28a745; font-weight: bold; margin: 8px 0 0 0;">{{ mensajeCuponExito }}</p>
-    }
-    @if (mensajeCuponError) {
-      <p style="color: #dc3545; font-weight: bold; margin: 8px 0 0 0;">{{ mensajeCuponError }}</p>
-    }
-  </div>
+      @if (mensajeCuponExito) {
+        <p style="color: #28a745; font-weight: bold; margin: 8px 0 0 0;">{{ mensajeCuponExito }}</p>
+      }
+      @if (mensajeCuponError) {
+        <p style="color: #dc3545; font-weight: bold; margin: 8px 0 0 0;">{{ mensajeCuponError }}</p>
+      }
+    </div>
+  }
 
   <!-- RESUMEN DEL CANDY -->
   <div style="margin-top: 20px; padding: 20px; border: 1px solid #28a745; border-radius: 8px; background: #f4fff4; display: flex; justify-content: space-between; align-items: center;">
