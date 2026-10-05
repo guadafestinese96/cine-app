@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { PeliculasService } from '../../services/peliculas';
 import { FormsModule } from '@angular/forms';
+import { AuthService } from '../../services/auth';
 
 @Component({
   selector: 'app-catalogo',
@@ -16,6 +17,7 @@ export class CatalogoComponent implements OnInit {
   funciones: any[] = [];
   topPeliculas: any[] = []; 
   proximosEstrenos: any[] = [];
+  peliculasPreventa: any[] = [];
 
   textoBusqueda: string = '';
   generoSeleccionado: string = 'Todos';
@@ -27,12 +29,13 @@ export class CatalogoComponent implements OnInit {
   nuevaResenaTexto: string = '';
   nuevaResenaEstrellas: number = 5;
 
-  // Modal Personalizado de Alerta (Reemplazo de alert nativo)
+  // Modal Personalizado de Alerta
   mostrarModalAlerta: boolean = false;
   mensajeModalAlerta: string = '';
 
   constructor(
     private peliculasService: PeliculasService,
+    private authService: AuthService,
     private router: Router,
     private cdr: ChangeDetectorRef
   ) {}
@@ -49,7 +52,11 @@ export class CatalogoComponent implements OnInit {
         this.peliculas = await this.peliculasService.obtenerPeliculas();
       }
 
-      // Cargar historial de compras y reseñas guardadas para calcular promedios de estrellas
+      this.funciones = await this.peliculasService.obtenerFunciones();
+
+      const hoy = new Date().toISOString().split('T')[0];
+
+      // Cargar historial de compras y reseñas guardadas para calcular promedios
       const historial = JSON.parse(localStorage.getItem('historial_compras') || '[]');
       const resenasGuardadas = JSON.parse(localStorage.getItem('reseñas_peliculas') || '[]');
 
@@ -80,7 +87,14 @@ export class CatalogoComponent implements OnInit {
         };
       });
 
-      this.funciones = await this.peliculasService.obtenerFunciones();
+      // SECCIÓN PREVENTA: Películas marcadas en preventa o con estreno futuro que YA tienen funciones programadas
+      this.peliculasPreventa = this.peliculas.filter(p => {
+        const esPreventaFlag = p.es_preventa === true || p.preventa === true;
+        const esEstrenoFuturo = p.fecha_estreno && p.fecha_estreno > hoy;
+        const tieneFunciones = this.getFuncionesDePelicula(p.id).length > 0;
+
+        return (esPreventaFlag || esEstrenoFuturo) && tieneFunciones;
+      });
 
       if (typeof this.peliculasService.obtenerTopPeliculasMasVendidas === 'function') {
         this.topPeliculas = await this.peliculasService.obtenerTopPeliculasMasVendidas();
@@ -127,10 +141,8 @@ export class CatalogoComponent implements OnInit {
     });
   }
 
-  // --- LÓGICA DE ALERTA DE ESTRENO SIN ALERT NATIVO ---
   async activarAlerta(pelicula: any) {
-    const usuarioLogueado = localStorage.getItem('usuario_logueado');
-    const usuario = usuarioLogueado ? JSON.parse(usuarioLogueado) : null;
+    const usuario = this.authService.usuarioActual();
 
     if (!usuario || !usuario.email) {
       this.mensajeModalAlerta = 'Debes iniciar sesión para activar las alertas de estreno.';
@@ -166,7 +178,6 @@ export class CatalogoComponent implements OnInit {
     this.router.navigate(['/sala']);
   }
 
-  // --- MODAL DE RESEÑAS ---
   verResenas(pelicula: any) {
     this.peliculaSeleccionadaModal = pelicula;
     this.nuevaResenaTexto = '';
@@ -189,8 +200,7 @@ export class CatalogoComponent implements OnInit {
   agregarResena() {
     if (!this.nuevaResenaTexto.trim()) return;
 
-    const usrStorage = localStorage.getItem('usuario_logueado');
-    const usuario = usrStorage ? JSON.parse(usrStorage) : null;
+    const usuario = this.authService.usuarioActual();
     const autor = usuario ? `${usuario.nombre || 'Usuario'} ${usuario.apellido || ''}`.trim() : 'Usuario Anónimo';
 
     const nuevaResena = {
@@ -208,7 +218,6 @@ export class CatalogoComponent implements OnInit {
     this.resenasModal.unshift(nuevaResena);
     this.nuevaResenaTexto = '';
 
-    // Actualizar cartelera con nuevo promedio
     this.cargarCartelera();
   }
 }

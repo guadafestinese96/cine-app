@@ -8,15 +8,22 @@ import { CandyComponent } from './componentes/candy/candy';
 import { TicketComponent } from './componentes/ticket/ticket';
 import { PerfilComponent } from './componentes/perfil/perfil';
 
+// Guards de autenticación y rol
+import { authGuard } from './guards/auth.guard';
+import { adminGuard } from './guards/admin.guard';
+
 export const routes: Routes = [
-  { path: '', redirectTo: 'catalogo', pathMatch: 'full' }, // Si entra a la raíz, redirige al catálogo
+  { path: '', redirectTo: 'catalogo', pathMatch: 'full' },
   { path: 'catalogo', component: CatalogoComponent },
   { path: 'registro', component: RegistroComponent },
-  { path: 'login', component: LoginComponent},
-  { path: 'admin', component: AdminComponent},
+  { path: 'login', component: LoginComponent },
   { path: 'sala', component: SalaComponent },
   { path: 'candy', component: CandyComponent },
   { path: 'ticket', component: TicketComponent },
-  { path: 'perfil', component: PerfilComponent },
-  { path: '**', redirectTo: 'catalogo' } // Cualquier ruta desconocida vuelve al catálogo
+
+  // Rutas protegidas
+  { path: 'perfil', component: PerfilComponent, canActivate: [authGuard] }, // Requiere inicio de sesión
+  { path: 'admin', component: AdminComponent, canActivate: [adminGuard] }, // Exclusivo para el rol administrador
+
+  { path: '**', redirectTo: 'catalogo' }
 ];

@@ -1,6 +1,6 @@
 <div style="max-width: 900px; margin: 30px auto; padding: 20px;">
   
-  <!-- DATOS DEL USUARIO Y CRÉDITO EN CUENTA (RF-19) -->
+  <!-- DATOS DEL USUARIO, CRÉDITO Y PUNTOS DE FIDELIZACIÓN (RF-19 y RF-24) -->
   @if (usuario) {
     <div style="background: #1a1a1a; color: white; padding: 20px; border-radius: 10px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
       <div>
@@ -8,10 +8,18 @@
         <p style="margin: 0; color: #ccc;">{{ usuario.nombre }} {{ usuario.apellido }} ({{ usuario.email }})</p>
       </div>
 
-      <!-- CREDITO EN CUENTA -->
-      <div style="background: #28a745; padding: 10px 20px; border-radius: 8px; text-align: center;">
-        <span style="font-size: 0.85rem; text-transform: uppercase; font-weight: bold;">CRÉDITO DISPONIBLE</span>
-        <h3 style="margin: 0; font-size: 1.5rem;">${{ usuario.credito_cuenta || 0 }}</h3>
+      <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+        <!-- CRÉDITO EN CUENTA -->
+        <div style="background: #28a745; padding: 10px 18px; border-radius: 8px; text-align: center;">
+          <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: bold; display: block;">CRÉDITO DISPONIBLE</span>
+          <h3 style="margin: 0; font-size: 1.4rem;">${{ usuario.credito_cuenta || 0 }}</h3>
+        </div>
+
+        <!-- PROGRAMA DE PUNTOS (RF-24) -->
+        <div style="background: #17a2b8; padding: 10px 18px; border-radius: 8px; text-align: center;">
+          <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: bold; display: block;">PUNTOS FIDELIDAD</span>
+          <h3 style="margin: 0; font-size: 1.4rem;">⭐ {{ usuario.puntos || 0 }} pts</h3>
+        </div>
       </div>
     </div>
   }
@@ -23,6 +31,60 @@
       {{ mensajeCancelacion }}
     </div>
   }
+
+  @if (mensajeCanje) {
+    <div style="padding: 12px; border-radius: 6px; margin-bottom: 20px; font-weight: bold;"
+         [style.background]="mensajeCanje.includes('❌') ? '#f8d7da' : '#d4edda'"
+         [style.color]="mensajeCanje.includes('❌') ? '#721c24' : '#155724'">
+      {{ mensajeCanje }}
+    </div>
+  }
+
+  <!-- RF-24: CATÁLOGO DE CANJE DE PUNTOS -->
+  <section style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 10px; padding: 20px; margin-bottom: 35px;">
+    <h3 style="margin-top: 0; color: #17a2b8; display: flex; align-items: center; gap: 8px;">
+      ⭐ Canje de Puntos ($1 gastado = 1 punto)
+    </h3>
+    <p style="font-size: 0.9rem; color: #555; margin-bottom: 15px;">
+      Tus puntos no son transferibles y se acumulan automáticamente con cada entrada o combo comprado.
+    </p>
+
+    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+      @for (p of premiosPuntos; track p.id) {
+        <div style="flex: 1; min-width: 200px; background: white; border: 1px solid #ddd; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <h4 style="margin: 0 0 6px 0; font-size: 1rem;">{{ p.nombre }}</h4>
+            <span style="color: #e0a800; font-weight: bold; font-size: 0.95rem;">{{ p.puntos }} pts</span>
+          </div>
+
+          <button 
+            type="button" 
+            (click)="canjear(p)"
+            [disabled]="(usuario?.puntos || 0) < p.puntos"
+            style="margin-top: 10px; padding: 6px 12px; background: #17a2b8; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.85rem;"
+            [style.opacity]="(usuario?.puntos || 0) < p.puntos ? '0.5' : '1'"
+          >
+            Canjear
+          </button>
+        </div>
+      }
+    </div>
+
+    <!-- HISTORIAL DE CANJES DE PUNTOS -->
+    @if (historialCanjes.length > 0) {
+      <div style="margin-top: 20px; border-top: 1px solid #ddd; padding-top: 15px;">
+        <h4 style="margin: 0 0 10px 0; font-size: 0.95rem; color: #333;">📜 Historial de Canjes Realizados:</h4>
+        <div style="max-height: 150px; overflow-y: auto;">
+          @for (c of historialCanjes; track c.id) {
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; border-bottom: 1px solid #eee; padding: 6px 0;">
+              <span><strong>{{ c.concepto }}</strong> (Código: {{ c.id }})</span>
+              <span style="color: #dc3545; font-weight: bold;">-{{ c.puntosUtilizados }} pts | {{ c.fecha | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </section>
 
   <!-- RF-18: HISTORIAL "MIS PELÍCULAS" CON POSTERS, ESTRELLAS Y RESEÑA -->
   <h3>🎬 Mis Películas & Entradas</h3>
@@ -41,7 +103,7 @@
           <p style="margin: 4px 0; color: #555; font-size: 0.9rem;">📍 {{ item.sala }}</p>
           <p style="margin: 4px 0; color: #555; font-size: 0.9rem;">📅 {{ item.fecha_hora | date:'dd/MM/yyyy HH:mm' }}hs</p>
           <p style="margin: 4px 0; font-size: 0.9rem;">
-            🎟️️ <strong>Asientos:</strong> {{ item.butacas ? item.butacas.join(', ') : 'Sin especificar' }}
+            🎟 <strong>Asientos:</strong> {{ item.butacas ? item.butacas.join(', ') : 'Sin especificar' }}
           </p>
 
           <!-- RATING Y COMENTARIO -->

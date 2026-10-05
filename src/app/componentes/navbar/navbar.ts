@@ -1,7 +1,8 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
+import { AuthService } from '../../services/auth';
 
 @Component({
   selector: 'app-navbar',
@@ -11,45 +12,25 @@ import { filter } from 'rxjs/operators';
   styleUrl: './navbar.css'
 })
 export class NavbarComponent implements OnInit {
-  usuarioLogueado: any = null;
   isMenuOpen: boolean = false;
 
-  constructor(private router: Router, private cdr: ChangeDetectorRef) {}
+  constructor(public authService: AuthService, private router: Router) {}
 
   ngOnInit() {
-    this.verificarUsuario();
-
-    // Actualiza el estado del usuario cada vez que cambia de vista o redirige
     this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe(() => {
-        this.verificarUsuario();
-        this.isMenuOpen = false; // Cierra el menú al cambiar de ruta
+        this.isMenuOpen = false;
       });
   }
 
-  verificarUsuario() {
-    const usrStorage = localStorage.getItem('usuario_logueado');
-    if (usrStorage) {
-      try {
-        this.usuarioLogueado = JSON.parse(usrStorage);
-      } catch (e) {
-        this.usuarioLogueado = null;
-      }
-    } else {
-      this.usuarioLogueado = null;
-    }
-    this.cdr.detectChanges();
+  // Getter que obtiene el valor de la Signal o null
+  get usuarioLogueado() {
+    return this.authService.usuarioActual();
   }
 
-  // Comprueba si el usuario en sesión es administrador
   get esAdmin(): boolean {
-    if (!this.usuarioLogueado) return false;
-    return (
-      this.usuarioLogueado.rol === 'admin' ||
-      this.usuarioLogueado.es_admin === true ||
-      this.usuarioLogueado.email === 'admin@cineapp.com'
-    );
+    return this.authService.esAdmin();
   }
 
   toggleMenu() {
@@ -58,8 +39,6 @@ export class NavbarComponent implements OnInit {
 
   cerrarSesion() {
     this.isMenuOpen = false;
-    localStorage.removeItem('usuario_logueado');
-    this.usuarioLogueado = null;
-    this.router.navigate(['/login']);
+    this.authService.cerrarSesion();
   }
 }

@@ -35,7 +35,6 @@
       Cartelera
     </a>
 
-    <!-- PESTAÑA ADMIN SOLO VISIBLE PARA EL ADMINISTRADOR -->
     @if (esAdmin) {
       <a
         routerLink="/admin"
@@ -58,7 +57,6 @@
   <!-- SECCIÓN DE LOGIN / USUARIO -->
   <div class="login" style="display: flex; align-items: center">
     @if (usuarioLogueado) {
-      <!-- CONTENEDOR USUARIO LOGUEADO (ABRE EL MENÚ LATERAL) -->
       <div
         (click)="toggleMenu()"
         title="Opciones de cuenta"
@@ -82,12 +80,11 @@
             white-space: nowrap;
           "
         >
-          {{ usuarioLogueado.nombre || usuarioLogueado.nombre_completo || usuarioLogueado.email }}
+          {{ usuarioLogueado?.nombre || usuarioLogueado?.email }}
         </span>
         <i class="fa-solid fa-circle-user" style="color: #f3c769; font-size: 26px"></i>
       </div>
     } @else {
-      <!-- CONTENEDOR INICIAR SESIÓN -->
       <a
         routerLink="/login"
         routerLinkActive="active"
@@ -122,7 +119,7 @@
       <div class="user-details">
         <i class="fa-solid fa-user-circle" style="font-size: 2.5rem; color: #f3c769"></i>
         <p class="user-name">
-          {{ usuarioLogueado.nombre || usuarioLogueado.nombre_completo || usuarioLogueado.email }}
+          {{ usuarioLogueado?.nombre || usuarioLogueado?.email }}
         </p>
       </div>
 
@@ -132,7 +129,6 @@
         <i class="fa-solid fa-id-card"></i> Mi Perfil
       </a>
 
-      <!-- OPCIÓN DE ACCESO RÁPIDO AL PANEL EN EL MENÚ LATERAL PARA EL ADMIN -->
       @if (esAdmin) {
         <a routerLink="/admin" class="sidebar-link" (click)="toggleMenu()" style="color: #f3c769;">
           <i class="fa-solid fa-user-gear"></i> Panel de Administración
