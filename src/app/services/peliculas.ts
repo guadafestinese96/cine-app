@@ -159,7 +159,7 @@ export class PeliculasService {
     const { data, error } = await this.supabase.client
       .from('peliculas')
       .select('*')
-      .gt('fecha_estreno', hoy)
+      .gt('fecha_estreno', hoy) //mayor a 
       .order('fecha_estreno', { ascending: true });
 
     if (error) {

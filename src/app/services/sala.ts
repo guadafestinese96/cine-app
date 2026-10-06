@@ -19,7 +19,6 @@ export class SalaService {
     { id: 3, nombre: 'Sala 3' }
   ];
 
-  // Supongamos que traés las funciones ya agendadas de la base de datos / Supabase
   funcionesExistentes: Funcion[] = [];
 
   obtenerSalaDisponible(fechaInicioDeseada: Date, duracionPeliculaMinutos: number): number | null {

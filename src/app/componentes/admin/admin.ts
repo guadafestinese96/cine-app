@@ -3,6 +3,19 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { PeliculasService } from '../../services/peliculas';
 
+// export interface Pelicula {
+//   id: number;
+//   nombre: string;
+//   sinopsis: string;
+//   duracion_minutos: number;
+//   imagen_url: string;
+//   clasificacion: string;
+//   genero: string;
+//   activa: boolean;
+//   fecha_estreno: Date | null; // puede ser null
+// }
+
+
 @Component({
   selector: 'app-admin',
   standalone: true,
@@ -11,6 +24,7 @@ import { PeliculasService } from '../../services/peliculas';
   styleUrl: './admin.css'
 })
 export class AdminComponent implements OnInit {
+  //Reactive form, lo defino en ts
   formPelicula!: FormGroup;
   formFuncion!: FormGroup;
   formCandy!: FormGroup;
