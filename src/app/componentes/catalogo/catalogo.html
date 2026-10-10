@@ -1,47 +1,37 @@
-<div style="padding: 20px; max-width: 1100px; margin: 0 auto">
+<div class="main-container">
 
   <!-- SECCIÓN DE PREVENTA EXCLUSIVA -->
   @if (peliculasPreventa && peliculasPreventa.length > 0) {
-    <section style="margin-bottom: 35px; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); padding: 20px; border-radius: 12px; color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
-      <h2 style="margin-top: 0; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; color: #f3c769;">
-        🎟️ Preventa Exclusiva (Entradas Anticipadas)
-      </h2>
+    <section class="section-preventa">
 
-      <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: flex-start;">
+      <div class="cards-grid">
         @for (p of peliculasPreventa; track p.id) {
-          <div style="width: 260px; background: #ffffff; color: #333; padding: 15px; border-radius: 10px; display: flex; flex-direction: column; justify-content: space-between; position: relative;">
-            
-            <span style="position: absolute; top: 10px; right: 10px; background: #e0a800; color: black; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 0.8rem; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 2;">
-              PREVENTA
-            </span>
+          <div class="card-preventa">
+            <span class="badge badge-preventa">PREVENTA</span>
 
-            <div>
+            <div class="card-body">
               <img
                 [src]="p.imagen_url || 'https://via.placeholder.com/200x300?text=Preventa'"
                 [alt]="p.nombre || p.titulo"
-                style="width: 100%; height: 260px; object-fit: cover; border-radius: 6px; margin-bottom: 10px;"
+                class="card-img"
               />
 
-              <h3 style="margin: 5px 0; font-size: 1.1rem; color: #212529;">{{ p.nombre || p.titulo }}</h3>
+              <h3 class="card-title">{{ p.nombre || p.titulo }}</h3>
               
-              <p style="font-size: 0.85rem; color: #555; margin: 4px 0;" *ngIf="p.fecha_estreno">
+              <p class="card-info" *ngIf="p.fecha_estreno">
                 <strong>Estreno:</strong> {{ p.fecha_estreno | date: 'dd/MM/yyyy' }}
               </p>
             </div>
 
-            <!-- FUNCIONES HABILITADAS PARA PREVENTA -->
-            <div style="border-top: 1px solid #eee; padding-top: 10px; margin-top: 10px;">
-              <h4 style="margin: 5px 0; font-size: 0.9rem; color: #0d47a1;">Comprar entradas anticipadas:</h4>
-              <div style="display: flex; flex-direction: column; gap: 6px;">
-                @for (f of getFuncionesDePelicula(p.id); track f.id) {
-                  <button
-                    (click)="seleccionarFuncion(f)"
-                    style="padding: 6px; background: #28a745; color: white; border: none; border-radius: 4px; font-size: 0.85rem; cursor: pointer; text-align: left; font-weight: bold;"
-                  >
-                    📅 {{ f.fecha_hora | date: 'dd/MM HH:mm' }}hs - {{ f.salas?.nombre || 'Sala ' + (f.sala_id || 1) }}
-                  </button>
-                }
-              </div>
+            <!-- BOTÓN DE COMPRA DE PREVENTA -->
+            <div class="card-footer-acciones">
+              <button 
+                class="btn-comprar"
+                [disabled]="getFuncionesDePelicula(p.id).length === 0"
+                (click)="comprarEntradas(p.id)"
+              >
+                {{ getFuncionesDePelicula(p.id).length > 0 ? '🎟️ Comprar entradas' : 'Sin funciones' }}
+              </button>
             </div>
 
           </div>
@@ -52,35 +42,30 @@
   
   <!-- SECCIÓN DESTACADA: TOP 3 PELÍCULAS MÁS VENDIDAS -->
   @if (topPeliculas && topPeliculas.length > 0) {
-    <section style="margin-bottom: 35px; background: linear-gradient(135deg, #fff3cd 0%, #ffecb3 100%); padding: 20px; border-radius: 12px; border: 1px solid #ffeeba; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
-      <h2 style="color: #856404; margin-top: 0; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
-        🔥 Top 3 Películas Más Vendidas
-      </h2>
+    <section class="section-top">
+      <h2 class="title-top">Top 3 Películas Más Vendidas</h2>
 
-      <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: flex-start;">
+      <div class="cards-grid">
         @for (p of topPeliculas; track p.id; let i = $index) {
-          <div style="flex: 1; min-width: 240px; max-width: 320px; background: #ffffff; padding: 15px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); display: flex; flex-direction: column; justify-content: space-between; position: relative;">
-            
-            <span style="position: absolute; top: 10px; left: 10px; background: #e0a800; color: white; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 2;">
-              #{{ i + 1 }}
-            </span>
+          <div class="card-top">
+            <span class="badge badge-rank">#{{ i + 1 }}</span>
 
-            <div>
+            <div class="card-body">
               <img
                 [src]="p.imagen_url || 'https://via.placeholder.com/200x300?text=Sin+Imagen'"
                 [alt]="p.nombre || p.titulo"
-                style="width: 100%; height: 260px; object-fit: cover; border-radius: 6px; margin-bottom: 10px;"
+                class="card-img"
               />
 
-              <h3 style="margin: 5px 0; font-size: 1.1rem; color: #212529;">{{ p.nombre || p.titulo }}</h3>
+              <h3 class="card-title">{{ p.nombre || p.titulo }}</h3>
               
-              <p style="font-size: 0.85rem; color: #555; margin: 4px 0;" *ngIf="p.duracion_minutos || p.duracion">
+              <p class="card-info" *ngIf="p.duracion_minutos || p.duracion">
                 <strong>Duración:</strong> {{ p.duracion_minutos || p.duracion }} min
               </p>
             </div>
 
-            <div style="margin-top: 10px; text-align: center;">
-              <span style="background: #28a745; color: white; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; display: block;">
+            <div class="badge-entradas-container">
+              <span class="badge-entradas">
                 🎟️ {{ p.entradasVendidas || 0 }} entradas vendidas
               </span>
             </div>
@@ -92,48 +77,40 @@
 
   <!-- SECCIÓN PRÓXIMAMENTE -->
   @if (proximosEstrenos && proximosEstrenos.length > 0) {
-    <section style="margin-bottom: 35px; background: #e3f2fd; padding: 20px; border-radius: 12px; border: 1px solid #90caf9;">
-      <h2 style="color: #0d47a1; margin-top: 0; margin-bottom: 15px;">🚀 Próximamente en Cines</h2>
+    <section class="section-proximamente">
+      <h2 class="title-proximamente">PROXIMAMENTE</h2>
 
-      <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: flex-start;">
+      <div class="cards-grid">
         @for (p of proximosEstrenos; track p.id) {
-          <div style="width: 240px; background: #ffffff; padding: 15px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); display: flex; flex-direction: column; justify-content: space-between;">
-            
-            <div>
+          <div class="card-proximamente">
+            <div class="card-body">
               <img
                 [src]="p.imagen_url || 'https://via.placeholder.com/200x300?text=Pr%C3%B3ximamente'"
                 [alt]="p.nombre || p.titulo"
-                style="width: 100%; height: 260px; object-fit: cover; border-radius: 6px; margin-bottom: 10px;"
+                class="card-img"
               />
 
-              <h3 style="margin: 5px 0; font-size: 1.1rem; color: #212529;">{{ p.nombre || p.titulo }}</h3>
+              <h3 class="card-title">{{ p.nombre || p.titulo }}</h3>
               
-              <p style="font-size: 0.85rem; color: #555; margin: 4px 0; line-height: 1.4;">
-                @if (p.expandida) {
-                  {{ p.sinopsis }}
-                } @else {
-                  {{ p.sinopsis | slice:0:110 }}@if (p.sinopsis?.length > 110) { ... }
-                }
+              <p class="card-sinopsis">
+                {{ p.sinopsis | slice:0:110 }}@if (p.sinopsis?.length > 110) { ... }
               </p>
 
               @if (p.sinopsis?.length > 110) {
                 <button 
                   type="button" 
-                  (click)="p.expandida = !p.expandida" 
-                  style="background: none; border: none; color: #007bff; font-weight: bold; cursor: pointer; padding: 0; font-size: 0.8rem; text-decoration: underline; margin-bottom: 6px;">
-                  {{ p.expandida ? 'Ver menos' : 'Ver más' }}
+                  (click)="comprarEntradas(p.id)" 
+                  class="btn-ver-mas-link">
+                  Ver más &rarr;
                 </button>
               }
 
-              <p style="font-size: 0.85rem; color: #0d47a1; font-weight: bold; margin-top: 8px;">
+              <p class="fecha-estreno-destacada">
                 Estreno: {{ p.fecha_estreno | date: 'dd/MM/yyyy' }}
               </p>
             </div>
 
-            <button
-              (click)="activarAlerta(p)"
-              style="margin-top: 12px; width: 100%; padding: 8px; background: #17a2b8; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;"
-            >
+            <button (click)="activarAlerta(p)" class="btn-notificar">
               🔔 Notificarme
             </button>
           </div>
@@ -145,24 +122,15 @@
   <h2>Películas en Cartelera</h2>
 
   <!-- CONTROLES DE BÚSQUEDA Y FILTRO -->
-  <div class="buscador" style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap">
+  <div class="buscador">
     <input
       type="text"
       placeholder="Buscar película por nombre..."
       [(ngModel)]="textoBusqueda"
-      style="
-        padding: 8px 12px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        flex: 1;
-        min-width: 200px;
-      "
+      class="input-search"
     />
 
-    <select
-      [(ngModel)]="generoSeleccionado"
-      style="padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px"
-    >
+    <select [(ngModel)]="generoSeleccionado" class="select-filter">
       <option value="Todos">Todos los géneros</option>
       <option value="Acción">Acción</option>
       <option value="Aventura">Aventura</option>
@@ -175,118 +143,69 @@
   </div>
 
   <!-- GRILLA DE PELÍCULAS FILTRADAS -->
-  <div style="display: flex; gap: 20px; flex-wrap: wrap">
+  <div class="cards-grid">
     @for (p of peliculasFiltradas; track p.id) {
-      <div
-        style="
-          border: 1px solid #ccc;
-          width: 260px;
-          padding: 15px;
-          border-radius: 8px;
-          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-        "
-      >
-        <div>
+      <div class="card-cartelera">
+        <div class="card-body">
           <img
             [src]="p.imagen_url || 'https://via.placeholder.com/200x300?text=Sin+Imagen'"
             [alt]="p.nombre || p.titulo"
-            style="width: 100%; height: 280px; object-fit: cover; border-radius: 4px"
+            class="card-img img-cartelera"
           />
 
-          <h3 style="margin: 10px 0 5px 0">{{ p.nombre || p.titulo }}</h3>
+          <h3 class="card-title title-cartelera">{{ p.nombre || p.titulo }}</h3>
 
-          <p style="font-size: 0.85rem; color: #555; margin: 5px 0; line-height: 1.4;">
-            @if (p.expandida) {
-              {{ p.sinopsis }}
-            } @else {
-              {{ p.sinopsis | slice:0:110 }}@if (p.sinopsis?.length > 110) { ... }
-            }
+          <p class="card-sinopsis">
+            {{ p.sinopsis | slice:0:110 }}@if (p.sinopsis?.length > 110) { ... }
           </p>
 
           @if (p.sinopsis?.length > 110) {
             <button 
               type="button" 
-              (click)="p.expandida = !p.expandida" 
-              style="background: none; border: none; color: #007bff; font-weight: bold; cursor: pointer; padding: 0; font-size: 0.8rem; text-decoration: underline; margin-bottom: 6px;">
-              {{ p.expandida ? 'Ver menos' : 'Ver más' }}
+              (click)="comprarEntradas(p.id)" 
+              class="btn-ver-mas-link">
+              Ver más &rarr;
             </button>
           }
 
-          <p style="margin: 5px 0; font-size: 0.9rem" *ngIf="p.duracion_minutos || p.duracion">
+          <p class="card-info" *ngIf="p.duracion_minutos || p.duracion">
             <strong>Duración:</strong> {{ p.duracion_minutos || p.duracion }} min
           </p>
 
           @if (p.clasificacion || p.restriccion_edad) {
-            <span
-              style="
-                background: #007bff;
-                color: white;
-                padding: 2px 8px;
-                border-radius: 4px;
-                font-size: 0.8rem;
-                display: inline-block;
-                margin-bottom: 10px;
-              "
-            >
+            <span class="badge-clasificacion">
               {{ p.clasificacion || p.restriccion_edad }}
             </span>
           }
         </div>
 
-        <!-- FUNCIONES PROGRAMADAS -->
-        <div style="border-top: 1px solid #eee; padding-top: 10px; margin-top: 10px">
-          <h4 style="margin: 5px 0; font-size: 0.95rem">Horarios disponibles:</h4>
-
-          <div style="display: flex; flex-direction: column; gap: 6px">
-            @for (f of getFuncionesDePelicula(p.id); track f.id) {
-              <button
-                (click)="seleccionarFuncion(f)"
-                style="
-                  padding: 6px;
-                  background: #28a745;
-                  color: white;
-                  border: none;
-                  border-radius: 4px;
-                  font-size: 0.85rem;
-                  cursor: pointer;
-                  text-align: left;
-                "
-              >
-                📅 {{ f.fecha_hora | date: 'dd/MM HH:mm' }}hs -
-                {{ f.salas?.nombre || 'Sala ' + (f.sala_id || 1) }} ({{ f.formato || '2D' }}
-                {{ f.idioma || 'Castellano' }})
-              </button>
-            } @empty {
-              <p style="font-size: 0.8rem; color: #888; font-style: italic">
-                Sin funciones programadas
-              </p>
-            }
-          </div>
+        <!-- BOTÓN DE COMPRA DE CARTELERA -->
+        <div class="card-footer-acciones">
+          <button 
+            class="btn-comprar"
+            [disabled]="getFuncionesDePelicula(p.id).length === 0"
+            (click)="comprarEntradas(p.id)"
+          >
+            {{ getFuncionesDePelicula(p.id).length > 0 ? 'Comprar entradas' : 'Sin funciones' }}
+          </button>
         </div>
 
         <!-- ESTRELLAS Y BOTÓN DE RESEÑAS -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; border-top: 1px solid #eee; padding-top: 8px;">
-          <div style="color: #ffc107; font-size: 1.1rem;" [title]="p.rating > 0 ? 'Calificación: ' + p.rating + '/5' : 'Sin puntuación'">
+        <div class="resenas-footer">
+          <div class="stars-rating" [title]="p.rating > 0 ? 'Calificación: ' + p.rating + '/5' : 'Sin puntuación'">
             @for (star of [1, 2, 3, 4, 5]; track star) {
               <span>{{ (p.rating || 0) >= star ? '★' : '☆' }}</span>
             }
           </div>
 
-          <button 
-            type="button" 
-            (click)="verResenas(p)"
-            style="padding: 6px 12px; background: #020202; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold;"
-          >
+          <button type="button" (click)="verResenas(p)" class="btn-ver-resenas">
             Ver Reseñas
           </button>
         </div>
         
       </div>
     } @empty {
-      <p style="color: #666; font-style: italic">
+      <p class="sin-resultados">
         No se encontraron películas que coincidan con la búsqueda.
       </p>
     }
@@ -294,46 +213,35 @@
 
   <!-- MODAL DE NOTIFICACIÓN DE ALERTA DE ESTRENO -->
   @if (mostrarModalAlerta) {
-    <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1100;">
-      <div style="background: white; border-radius: 12px; padding: 25px; max-width: 420px; width: 90%; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.2); border: 1px solid #ddd;">
-        
-        <div style="font-size: 2.5rem; margin-bottom: 10px;">🔔</div>
-        
-        <h3 style="margin: 0 0 10px 0; color: #212529;">Notificación</h3>
-        
-        <p style="font-size: 0.95rem; color: #555; margin-bottom: 20px; line-height: 1.4;">
-          {{ mensajeModalAlerta }}
-        </p>
-
-        <button 
-          type="button" 
-          (click)="cerrarModalAlerta()"
-          style="padding: 10px 24px; background: #007bff; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.95rem;"
-        >
+    <div class="modal-overlay modal-overlay-alerta">
+      <div class="modal-content modal-content-alerta">
+        <div class="modal-icon">🔔</div>
+        <h3 class="modal-title">Notificación</h3>
+        <p class="modal-text">{{ mensajeModalAlerta }}</p>
+        <button type="button" (click)="cerrarModalAlerta()" class="btn-modal-primary">
           Aceptar
         </button>
-
       </div>
     </div>
   }
 
   <!-- MODAL INTERACTIVO PARA VER Y ESCRIBIR RESEÑAS -->
   @if (mostrarModalResenas) {
-    <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000;">
-      <div style="background: white; width: 90%; max-width: 500px; padding: 25px; border-radius: 10px; max-height: 85vh; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+    <div class="modal-overlay">
+      <div class="modal-content modal-content-resenas">
         
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 10px;">
-          <h3 style="margin: 0;">💬 Reseñas: {{ peliculaSeleccionadaModal?.nombre || peliculaSeleccionadaModal?.titulo }}</h3>
-          <button (click)="cerrarModalResenas()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+        <div class="modal-header">
+          <h3>💬 Reseñas: {{ peliculaSeleccionadaModal?.nombre || peliculaSeleccionadaModal?.titulo }}</h3>
+          <button (click)="cerrarModalResenas()" class="btn-close-modal">&times;</button>
         </div>
 
         <!-- FORMULARIO PARA ESCRIBIR NUEVA RESEÑA -->
-        <div style="margin: 15px 0; background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #e9ecef;">
-          <h4 style="margin: 0 0 8px 0; font-size: 0.95rem;">Escribir una reseña</h4>
+        <div class="form-resena">
+          <h4 class="form-resena-title">Escribir una reseña</h4>
           
-          <div style="margin-bottom: 8px;">
-            <label style="font-size: 0.85rem; font-weight: bold;">Tu puntuación: </label>
-            <select [(ngModel)]="nuevaResenaEstrellas" style="padding: 4px; border-radius: 4px; border: 1px solid #ccc; font-weight: bold;">
+          <div class="form-group-rating">
+            <label>Tu puntuación: </label>
+            <select [(ngModel)]="nuevaResenaEstrellas" class="select-stars">
               <option [ngValue]="5">⭐⭐⭐⭐⭐ (5/5)</option>
               <option [ngValue]="4">⭐⭐⭐⭐☆ (4/5)</option>
               <option [ngValue]="3">⭐⭐⭐☆☆ (3/5)</option>
@@ -346,36 +254,36 @@
             [(ngModel)]="nuevaResenaTexto" 
             placeholder="¿Qué te pareció la película?" 
             rows="3" 
-            style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;"
+            class="textarea-resena"
           ></textarea>
 
           <button 
             (click)="agregarResena()" 
             [disabled]="!nuevaResenaTexto.trim()"
-            style="margin-top: 8px; width: 100%; padding: 8px; background: #28a745; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;"
+            class="btn-publicar-resena"
           >
             Publicar Reseña
           </button>
         </div>
 
         <!-- LISTA DE RESEÑAS PUBLICADAS -->
-        <div>
-          <h4 style="margin: 15px 0 10px 0;">Opiniones de los espectadores:</h4>
+        <div class="resenas-list-container">
+          <h4 class="resenas-list-title">Opiniones de los espectadores:</h4>
           @for (r of resenasModal; track r.fecha) {
-            <div style="border-bottom: 1px solid #eee; padding: 8px 0;">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="resena-item">
+              <div class="resena-header">
                 <strong>{{ r.autor }}</strong>
-                <span style="color: #ffc107;">
+                <span class="stars-rating">
                   @for (star of [1, 2, 3, 4, 5]; track star) {
                     <span>{{ r.estrellas >= star ? '★' : '☆' }}</span>
                   }
                 </span>
               </div>
-              <p style="margin: 4px 0 0 0; font-size: 0.9rem; color: #444;">{{ r.comentario }}</p>
-              <small style="color: #888; font-size: 0.75rem;">{{ r.fecha | date:'dd/MM/yyyy HH:mm' }}</small>
+              <p class="resena-comentario">{{ r.comentario }}</p>
+              <small class="resena-fecha">{{ r.fecha | date:'dd/MM/yyyy HH:mm' }}</small>
             </div>
           } @empty {
-            <p style="color: #777; font-style: italic; font-size: 0.9rem;">Aún no hay reseñas para esta película. ¡Sé el primero en dejar la tuya!</p>
+            <p class="sin-resenas">Aún no hay reseñas para esta película. ¡Sé el primero en dejar la tuya!</p>
           }
         </div>
 

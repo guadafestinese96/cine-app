@@ -15,6 +15,7 @@ interface CompraHistorial {
   calificacion?: number;
   comentario?: string;
   cancelada?: boolean;
+  puntosGanados?: number;
 }
 
 @Component({
@@ -27,11 +28,11 @@ interface CompraHistorial {
 export class PerfilComponent implements OnInit {
   usuario: any = null;
   historialCompras: CompraHistorial[] = [];
-  historialCanjes: CanjePuntos[] = [];
+  historialCanjes: any[] = [];
   mensajeCancelacion: string = '';
   mensajeCanje: string = '';
+  ultimoCuponGenerado: string = '';
 
-  // Catálogo de premios del programa de fidelización (RF-24)
   premiosPuntos = [
     { id: 1, nombre: '🥤 Gaseosa Mediana', puntos: 1500 },
     { id: 2, nombre: '🍿 Pochoclos Medianos', puntos: 2500 },
@@ -56,7 +57,21 @@ export class PerfilComponent implements OnInit {
       this.router.navigate(['/login']);
       return;
     }
-    this.historialCanjes = this.authService.obtenerHistorialCanjes();
+
+    const emailKey = this.usuario.email || 'defecto';
+
+    // Cargar puntos
+    const puntosGlobales = JSON.parse(localStorage.getItem('puntos_fidelidad_usuarios') || '{}');
+    if (puntosGlobales[emailKey] !== undefined) {
+      this.usuario.puntos_fidelidad = puntosGlobales[emailKey];
+      this.usuario.puntos = puntosGlobales[emailKey];
+    } else if (this.usuario.puntos_fidelidad === undefined) {
+      this.usuario.puntos_fidelidad = this.usuario.puntos || 0;
+    }
+
+    // Cargar historial de canjes del localStorage
+    const canjesStorage = JSON.parse(localStorage.getItem('historial_canjes_puntos') || '[]');
+    this.historialCanjes = canjesStorage.filter((c: any) => c.usuarioEmail === emailKey);
   }
 
   cargarHistorial() {
@@ -66,15 +81,45 @@ export class PerfilComponent implements OnInit {
     }
   }
 
-  // RF-24: Realizar canje de puntos
+  // RF-24: Realizar canje de puntos con generación de código de cupón
   canjear(premio: { nombre: string; puntos: number }) {
     this.mensajeCanje = '';
-    const exito = this.authService.canjearPuntos(premio.puntos, premio.nombre);
+    this.ultimoCuponGenerado = '';
+    const puntosActuales = Number(this.usuario?.puntos_fidelidad || this.usuario?.puntos || 0);
 
-    if (exito) {
-      this.mensajeCanje = `✅ ¡Canje exitoso! Canjeaste "${premio.nombre}" por ${premio.puntos} puntos. Presentá tu cupón en caja.`;
-      this.usuario = this.authService.usuarioActual();
-      this.historialCanjes = this.authService.obtenerHistorialCanjes();
+    if (puntosActuales >= premio.puntos) {
+      const nuevosPuntos = puntosActuales - premio.puntos;
+      
+      this.usuario.puntos_fidelidad = nuevosPuntos;
+      this.usuario.puntos = nuevosPuntos;
+
+      // Generar código de cupón único
+      const codigoCupon = 'CANJE-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+      this.ultimoCuponGenerado = codigoCupon;
+
+      // Guardar en usuario_logueado y en diccionario global de puntos
+      localStorage.setItem('usuario_logueado', JSON.stringify(this.usuario));
+      const puntosGlobales = JSON.parse(localStorage.getItem('puntos_fidelidad_usuarios') || '{}');
+      const emailKey = this.usuario.email || 'defecto';
+      puntosGlobales[emailKey] = nuevosPuntos;
+      localStorage.setItem('puntos_fidelidad_usuarios', JSON.stringify(puntosGlobales));
+
+      // Registro de canje en historial
+      const nuevoCanje = {
+        id: codigoCupon,
+        premio: premio.nombre,
+        puntos: premio.puntos,
+        fecha: new Date().toISOString(),
+        usuarioEmail: emailKey,
+        codigoCupon: codigoCupon
+      };
+
+      const todosLosCanjes = JSON.parse(localStorage.getItem('historial_canjes_puntos') || '[]');
+      todosLosCanjes.unshift(nuevoCanje);
+      localStorage.setItem('historial_canjes_puntos', JSON.stringify(todosLosCanjes));
+
+      this.historialCanjes.unshift(nuevoCanje);
+      this.mensajeCanje = `✅ ¡Canje exitoso! Presentá el cupón ${codigoCupon} en caja para retirar "${premio.nombre}".`;
     } else {
       this.mensajeCanje = `❌ No tenés suficientes puntos para canjear "${premio.nombre}".`;
     }

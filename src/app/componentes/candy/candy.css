@@ -1,0 +1,14 @@
+.titulo-candy{
+    display:flex;
+    align-items:end;
+    text-transform: uppercase;
+    color: var(--color-rojo);
+    font-size: 25px;
+    margin-bottom: 10px;
+}
+
+.pochoclos-candy-img{
+    width: 100px;
+    filter: drop-shadow(5px 5px 5px var(--color-azul-lente));
+    margin-right: 20px;
+}

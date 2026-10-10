@@ -5,8 +5,15 @@
     padding: 0;
 }
 
+
 button:hover{
     background-color: rgb(102, 102, 96) !important;
     cursor: pointer !important;
 }
-
+:root{
+    --color-rojo: #E53935;
+    --color-amarillo-pochoclo: #FDD835;
+    --color-azul-lente: #1E88E5;
+    --gris-oscuro: #424242;
+    
+}

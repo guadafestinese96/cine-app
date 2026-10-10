@@ -1,0 +1,136 @@
+.detalle-container {
+  max-width: 1000px;
+  margin: 30px auto;
+  padding: 25px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Cabecera */
+.pelicula-card-header {
+  display: flex;
+  gap: 30px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.poster-img {
+  width: 260px;
+  height: 380px;
+  object-fit: cover;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.pelicula-info {
+  flex: 1;
+  min-width: 280px;
+}
+
+.pelicula-titulo {
+  font-size: 2rem;
+  margin-top: 0;
+  margin-bottom: 12px;
+  color: #1a1a1a;
+}
+
+.badges-info {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.badge-tag {
+  background: #007bff;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: bold;
+}
+
+.sinopsis {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #444;
+  margin-bottom: 20px;
+}
+
+.meta-dato {
+  font-size: 0.95rem;
+  color: #666;
+}
+
+.divider {
+  margin: 30px 0;
+  border: 0;
+  border-top: 1px solid #eee;
+}
+
+/* Funciones */
+.funciones-section h2 {
+  font-size: 1.4rem;
+  color: #212529;
+  margin-bottom: 20px;
+}
+
+.funciones-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 15px;
+}
+
+.card-funcion {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-funcion:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+
+.funcion-detalles {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.funcion-fecha {
+  font-weight: bold;
+  color: #0d47a1;
+}
+
+.btn-seleccionar-funcion {
+  width: 100%;
+  padding: 10px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-seleccionar-funcion:hover {
+  background-color: #218838;
+}
+
+.mensaje-sin-funciones,
+.cargando-container {
+  text-align: center;
+  padding: 30px;
+  color: #666;
+  font-style: italic;
+}

@@ -1,0 +1,530 @@
+/* Layout Principal */
+.main-container {
+  padding: 20px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.cards-grid {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+/* Badges / Etiquetas generales */
+.badge {
+  position: absolute;
+  top: 10px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 2;
+}
+
+.badge-preventa {
+  right: 10px;
+  background: var(--color-amarillo-pochoclo);
+  color: black;
+  border: 0.5px solid black;
+  font-size: 0.8rem;
+}
+
+.badge-rank {
+  left: 10px;
+  background: var(--color-amarillo-pochoclo);
+  color: black;
+  border: 0.5px solid black;
+  font-size: 0.9rem;
+}
+
+/* Badge de Clasificación parejo (+13, ATP, etc.) */
+.badge-clasificacion {
+  background: #206711;
+  color: white;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  display: inline-block;
+  align-self: flex-start;
+  margin-top: 4px;
+  margin-bottom: 8px;
+}
+
+/* Tarjetas */
+.card-preventa,
+.card-top,
+.card-proximamente,
+.card-cartelera {
+  background: #ffffff;
+  padding: 15px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.card-preventa {
+  width: 230px;
+  color: #333;
+}
+
+.card-top {
+  flex: 1;
+  min-width: 240px;
+  max-width: 320px;
+}
+
+.card-proximamente {
+  width: 240px;
+}
+
+/* Tarjetas de Cartelera distribuidas limpiamente */
+.card-cartelera {
+  border: 1px solid #ccc;
+  width: 260px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
+}
+
+.card-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+/* Imágenes */
+.card-img {
+  width: 100%;
+  height: 260px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
+.img-cartelera {
+  height: 280px;
+  border-radius: 4px;
+}
+
+.card-title {
+  margin: 5px 0;
+  font-size: 1.1rem;
+  color: #212529;
+}
+
+/* Título con espacio fijo hasta 2 líneas */
+.title-cartelera {
+  margin: 8px 0 4px 0;
+  font-size: 1rem;
+  line-height: 1.3;
+  min-height: 2.6em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-info {
+  font-size: 0.85rem;
+  color: #555;
+  margin: 4px 0;
+}
+
+/* Sinopsis recortada limpia */
+.card-sinopsis {
+  font-size: 0.85rem;
+  color: #555;
+  margin: 4px 0;
+  line-height: 1.35;
+  min-height: 3.8em;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Botón Ver más → estilo enlace con transición suave */
+.btn-ver-mas-link {
+  background: none;
+  border: none;
+  color: var(--color-azul-lente);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 8px;
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.btn-ver-mas-link:hover {
+  
+  text-decoration: underline;
+  transform: translateX(3px);
+}
+
+/* Sección 1: Preventa */
+.section-preventa {
+  margin-bottom: 35px;
+  padding: 20px;
+  border-radius: 12px;
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  background-color: var(--color-amarillo-pochoclo);
+}
+
+.title-preventa {
+  margin-top: 0;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: black;
+}
+
+/* Acciones de compra en la tarjeta */
+.card-footer-acciones {
+  border-top: 1px solid #eee;
+  padding-top: 10px;
+  margin-top: auto;
+  width: 100%;
+}
+
+.btn-comprar {
+  width: 100%;
+  padding: 10px;
+  background-color: black;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+
+.btn-comprar:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.btn-comprar:disabled {
+  background-color: #e0e0e0;
+  color: #888888;
+  cursor: not-allowed;
+  opacity: 0.8;
+  box-shadow: none;
+  border: 1px solid #ccc;
+}
+
+/* Sección 2: Top 3 */
+.section-top {
+  margin-bottom: 35px;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #ffeeba;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.title-top {
+  color: var(--color-amarillo-pochoclo);
+  margin-top: 0;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-transform: uppercase;
+}
+
+.badge-entradas-container {
+  margin-top: 10px;
+  text-align: center;
+}
+
+.badge-entradas {
+  background: black;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: bold;
+  display: block;
+}
+
+/* Sección 3: Próximamente */
+.section-proximamente {
+  margin-bottom: 35px;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 20px;
+  border-radius: 12px;
+}
+
+.title-proximamente {
+  color: var(--color-rojo);
+  margin-top: 0;
+  margin-bottom: 15px;
+}
+
+.fecha-estreno-destacada {
+  font-size: 0.85rem;
+  color: #0d47a1;
+  font-weight: bold;
+  margin-top: 8px;
+}
+
+.btn-notificar {
+  margin-top: 12px;
+  width: 100%;
+  padding: 8px;
+  background: black;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* Buscador y Filtro */
+.buscador {
+  margin-bottom: 20px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.input-search {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  flex: 1;
+  min-width: 200px;
+}
+
+.select-filter {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.sin-resultados {
+  color: #666;
+  font-style: italic;
+}
+
+/* Reseñas Footer en Tarjeta */
+.resenas-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  border-top: 1px solid #eee;
+  padding-top: 8px;
+}
+
+.stars-rating {
+  color: #ffc107;
+  font-size: 1.1rem;
+}
+
+.btn-ver-resenas {
+  padding: 6px 12px;
+  background: var(--color-amarillo-pochoclo);
+  border: none;
+  color: black;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+/* Modales (General y Overlay) */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-overlay-alerta {
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1100;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.modal-content-alerta {
+  max-width: 420px;
+  width: 90%;
+  text-align: center;
+  border: 1px solid #ddd;
+}
+
+.modal-content-resenas {
+  width: 90%;
+  max-width: 500px;
+  border-radius: 10px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Elementos Modal Alerta */
+.modal-icon {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+}
+
+.modal-title {
+  margin: 0 0 10px 0;
+  color: #212529;
+}
+
+.modal-text {
+  font-size: 0.95rem;
+  color: #555;
+  margin-bottom: 20px;
+  line-height: 1.4;
+}
+
+.btn-modal-primary {
+  padding: 10px 24px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+/* Elementos Modal Reseñas */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 10px;
+}
+
+.modal-header h3 {
+  margin: 0;
+}
+
+.btn-close-modal {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.form-resena {
+  margin: 15px 0;
+  background: #f8f9fa;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+}
+
+.form-resena-title {
+  margin: 0 0 8px 0;
+  font-size: 0.95rem;
+}
+
+.form-group-rating {
+  margin-bottom: 8px;
+}
+
+.form-group-rating label {
+  font-size: 0.85rem;
+  font-weight: bold;
+}
+
+.select-stars {
+  padding: 4px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  font-weight: bold;
+}
+
+.textarea-resena {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.btn-publicar-resena {
+  margin-top: 8px;
+  width: 100%;
+  padding: 8px;
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.btn-publicar-resena:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.resenas-list-title {
+  margin: 15px 0 10px 0;
+}
+
+.resena-item {
+  border-bottom: 1px solid #eee;
+  padding: 8px 0;
+}
+
+.resena-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.resena-comentario {
+  margin: 4px 0 0 0;
+  font-size: 0.9rem;
+  color: #444;
+}
+
+.resena-fecha {
+  color: #888;
+  font-size: 0.75rem;
+}
+
+.sin-resenas {
+  color: #777;
+  font-style: italic;
+  font-size: 0.9rem;
+}

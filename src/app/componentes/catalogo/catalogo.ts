@@ -173,6 +173,11 @@ export class CatalogoComponent implements OnInit {
     return this.funciones.filter(f => Number(f.pelicula_id) === Number(peliculaId));
   }
 
+  // Redirige al detalle de la película en la MISMA pestaña
+  comprarEntradas(peliculaId: number) {
+    this.router.navigate(['/pelicula', peliculaId]);
+  }
+
   seleccionarFuncion(funcion: any) {
     localStorage.setItem('funcion_seleccionada', JSON.stringify(funcion));
     this.router.navigate(['/sala']);

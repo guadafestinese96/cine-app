@@ -1,85 +1,133 @@
-<div style="max-width: 900px; margin: 20px auto; padding: 20px;">
-  <h2>🍿 Candy Bar & Combos</h2>
+<div style="max-width: 900px; margin: 20px auto; padding: 20px">
+  <div class="titulo-candy">
+    <img src="cine-img.png" alt="pochoclos-candy" class="pochoclos-candy-img" />
+    <h2>Candy</h2>
+  </div>
   <p>Elegí tus snacks para acompañar la película antes de confirmar tu entrada:</p>
 
-  <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 20px;">
-    
+  <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 20px">
     @for (p of productos; track p.id) {
-      <div style="border: 1px solid #ccc; width: 250px; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; flex-direction: column; justify-content: space-between;">
-        
+      <div
+        style="
+          border: 1px solid #ccc;
+          width: 250px;
+          padding: 15px;
+          border-radius: 8px;
+          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+        "
+      >
         <div>
-          <img [src]="p.imagen_url || 'https://via.placeholder.com/300x200?text=Candy+Bar'" [alt]="p.nombre" style="width: 100%; height: 160px; object-fit: cover; border-radius: 6px;">
-          <h3 style="margin: 10px 0 5px 0; font-size: 1.1rem;">{{ p.nombre }}</h3>
-          <p style="font-size: 0.85rem; color: #666;">{{ p.descripcion }}</p>
-          <p style="font-size: 1.2rem; font-weight: bold; color: #28a745; margin: 10px 0;">${{ p.precio }}</p>
+          <img
+            [src]="p.imagen_url || 'https://via.placeholder.com/300x200?text=Candy+Bar'"
+            [alt]="p.nombre"
+            style="width: 100%; height: 160px; object-fit: cover; border-radius: 6px"
+          />
+          <h3 style="margin: 10px 0 5px 0; font-size: 1.1rem">{{ p.nombre }}</h3>
+          <p style="font-size: 0.85rem; color: #666">{{ p.descripcion }}</p>
+          <p style="font-size: 1.2rem; font-weight: bold; color: #28a745; margin: 10px 0">
+            ${{ p.precio }}
+          </p>
         </div>
 
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 10px;">
-          <button (click)="quitarDelCarrito(p)" [disabled]="getCantidad(p) === 0" style="padding: 5px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">-</button>
-          
-          <span style="font-size: 1.1rem; font-weight: bold;">{{ getCantidad(p) }}</span>
-          
-          <button (click)="agregarAlCarrito(p)" style="padding: 5px 12px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">+</button>
-        </div>
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 10px;
+          "
+        >
+          <button
+            (click)="quitarDelCarrito(p)"
+            [disabled]="getCantidad(p) === 0"
+            style="
+              padding: 5px 12px;
+              background: #dc3545;
+              color: white;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+              font-weight: bold;
+            "
+          >
+            -
+          </button>
 
+          <span style="font-size: 1.1rem; font-weight: bold">{{ getCantidad(p) }}</span>
+
+          <button
+            (click)="agregarAlCarrito(p)"
+            style="
+              padding: 5px 12px;
+              background: #28a745;
+              color: white;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+              font-weight: bold;
+            "
+          >
+            +
+          </button>
+        </div>
       </div>
     } @empty {
       <p>Cargando productos o no hay disponibles en este momento...</p>
     }
-
   </div>
 
-  <!-- SECCIÓN PARA INGRESAR EL CUPÓN DE DESCUENTO (SOLO VISIBLE SI EL USUARIO ESTÁ LOGUEADO) -->
-  @if (usuarioLogueado) {
-    <div style="margin-top: 25px; padding: 15px; border: 1px dashed #007bff; border-radius: 8px; background: #f8f9fa;">
-      <h4 style="margin: 0 0 10px 0; color: #007bff;">🎫 ¿Tenés un cupón de descuento?</h4>
-      <div style="display: flex; gap: 10px; align-items: center;">
-        <input 
-          type="text" 
-          [(ngModel)]="codigoCupon" 
-          placeholder="Ej: MAYOR50" 
-          style="padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; text-transform: uppercase; font-weight: bold;"
-        />
-        <button 
-          (click)="aplicarCupon()" 
-          style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
-          Aplicar Cupón
-        </button>
-      </div>
-
-      @if (mensajeCuponExito) {
-        <p style="color: #28a745; font-weight: bold; margin: 8px 0 0 0;">{{ mensajeCuponExito }}</p>
-      }
-      @if (mensajeCuponError) {
-        <p style="color: #dc3545; font-weight: bold; margin: 8px 0 0 0;">{{ mensajeCuponError }}</p>
-      }
-    </div>
-  }
+  
+  
 
   <!-- RESUMEN DEL CANDY -->
-  <div style="margin-top: 20px; padding: 20px; border: 1px solid #28a745; border-radius: 8px; background: #f4fff4; display: flex; justify-content: space-between; align-items: center;">
+  <div
+    style="
+      margin-top: 20px;
+      padding: 20px;
+      border: 1px solid #28a745;
+      border-radius: 8px;
+      background: #f4fff4;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    "
+  >
     <div>
-      <h3 style="margin: 0;">
+      <h3 style="margin: 0">
         Subtotal: <strong>${{ subtotalCandy }}</strong>
       </h3>
 
       @if (porcentajeDescuento > 0) {
-        <p style="margin: 5px 0 0 0; color: #28a745; font-weight: bold;">
+        <p style="margin: 5px 0 0 0; color: #28a745; font-weight: bold">
           Descuento ({{ porcentajeDescuento }}%): -${{ montoDescuento }}
         </p>
-        <h3 style="margin: 5px 0 0 0; color: #28a745;">
+        <h3 style="margin: 5px 0 0 0; color: #28a745">
           Total con Descuento: <strong>${{ totalCandy }}</strong>
         </h3>
       }
 
-      <p style="margin: 5px 0 0 0; font-size: 0.9rem; color: #555;">
+      <p style="margin: 5px 0 0 0; font-size: 0.9rem; color: #555">
         Items seleccionados: {{ carritoCandy.length }}
       </p>
     </div>
 
-    <button (click)="continuarAlPago()" style="padding: 12px 24px; background: #007bff; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 1rem; cursor: pointer;">
+    <button
+      (click)="continuarAlPago()"
+      style="
+        padding: 12px 24px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-weight: bold;
+        font-size: 1rem;
+        cursor: pointer;
+      "
+    >
       Continuar al Resumen Final →
     </button>
   </div>
-
 </div>

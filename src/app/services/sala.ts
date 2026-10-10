@@ -22,6 +22,7 @@ export class SalaService {
   funcionesExistentes: Funcion[] = [];
 
   obtenerSalaDisponible(fechaInicioDeseada: Date, duracionPeliculaMinutos: number): number | null {
+    //getTime() devuelve milisegundos
     const finFuncionDeseada = new Date(fechaInicioDeseada.getTime() + (duracionPeliculaMinutos + 30) * 60000);
 
     for (const sala of this.salas) {

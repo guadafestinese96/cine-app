@@ -1,21 +1,112 @@
 import { Injectable } from '@angular/core';
 import { SupabaseService } from './supabase';
+import { RealtimeChannel } from '@supabase/supabase-js';
+import { Observable, Subject } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
 })
 export class PeliculasService {
+  private canalRealtime: RealtimeChannel | null = null;
+  private realtimeSubject = new Subject<any>();
+
   constructor(private supabase: SupabaseService) {}
+
+  // --- REALTIME BUTACAS ---
+
+  escucharButacasRealtime(funcionId: number): Observable<any> {
+    if (this.canalRealtime) {
+      this.supabase.client.removeChannel(this.canalRealtime);
+    }
+
+    this.canalRealtime = this.supabase.client
+      .channel(`realtime-butacas-${funcionId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Escucha INSERT y DELETE
+          schema: 'public',
+          table: 'butacas_ocupadas',
+          filter: `funcion_id=eq.${funcionId}`,
+        },
+        (payload) => {
+          this.realtimeSubject.next(payload);
+        }
+      )
+      .subscribe();
+
+    return this.realtimeSubject.asObservable();
+  }
+
+  async obtenerButacasOcupadas(funcionId: number) {
+    const { data, error } = await this.supabase.client
+      .from('butacas_ocupadas')
+      .select('fila, numero, session_id, usuario_email')
+      .eq('funcion_id', funcionId);
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  async ocuparButaca(funcionId: number, fila: string, numero: number, sessionId: string, usuarioEmail?: string) {
+    const { data, error } = await this.supabase.client
+      .from('butacas_ocupadas')
+      .insert([
+        {
+          funcion_id: Number(funcionId),
+          fila: String(fila),
+          numero: Number(numero),
+          session_id: sessionId,
+          usuario_email: usuarioEmail || null,
+        },
+      ])
+      .select();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async liberarButaca(funcionId: number, fila: string, numero: number, sessionId: string) {
+    const { error } = await this.supabase.client
+      .from('butacas_ocupadas')
+      .delete()
+      .eq('funcion_id', Number(funcionId))
+      .eq('fila', String(fila))
+      .eq('numero', Number(numero))
+      .eq('session_id', sessionId);
+
+    if (error) {
+      console.error('Error al liberar la butaca:', error);
+      throw error;
+    }
+  }
+
+  desconectarRealtime() {
+    if (this.canalRealtime) {
+      this.supabase.client.removeChannel(this.canalRealtime);
+      this.canalRealtime = null;
+    }
+  }
+
+  // --- PELÍCULAS ---
 
   async obtenerPeliculas() {
     const { data, error } = await this.supabase.client.from('peliculas').select('*');
+    if (error) return [];
+    return data;
+  }
+
+  async obtenerPeliculasActivas() {
+    const { data, error } = await this.supabase.client
+      .from('peliculas')
+      .select('*')
+      .or('activa.eq.true,activa.is.null');
 
     if (error) {
-      console.error('Error al obtener películas:', error);
+      console.error('Error al obtener películas activas:', error);
       return [];
     }
-
-    return data;
+    return data || [];
   }
 
   async guardarPelicula(pelicula: {
@@ -37,66 +128,6 @@ export class PeliculasService {
     return this.guardarPelicula(pelicula);
   }
 
-  async obtenerSalas() {
-    const { data, error } = await this.supabase.client.from('salas').select('*');
-    if (error) throw error;
-    return data;
-  }
-
-  async obtenerFuncionesPorSala(salaId: number) {
-    const { data, error } = await this.supabase.client
-      .from('funciones')
-      .select('*, peliculas(duracion_minutos)')
-      .eq('sala_id', salaId);
-    if (error) throw error;
-    return data || [];
-  }
-
-  async guardarFuncion(funcion: {
-    pelicula_id: number;
-    sala_id: number;
-    fecha_hora: string;
-    formato: string;
-    idioma: string;
-    precio_base?: number;
-  }) {
-    const { data, error } = await this.supabase.client.from('funciones').insert([funcion]).select();
-    if (error) throw error;
-    return data;
-  }
-
-  async agregarFuncion(funcion: any) {
-    return this.guardarFuncion(funcion);
-  }
-
-  async obtenerButacasOcupadas(funcionId: number) {
-    const { data, error } = await this.supabase.client
-      .from('butacas_ocupadas')
-      .select('fila, numero')
-      .eq('funcion_id', funcionId);
-
-    if (error) throw error;
-    return data || [];
-  }
-
-  async reservarButacas(
-    reservas: { funcion_id: number; fila: string; numero: number; usuario_id?: string }[],
-  ) {
-    const { data, error } = await this.supabase.client.from('butacas_ocupadas').insert(reservas);
-
-    if (error) throw error;
-    return data;
-  }
-
-  async obtenerFunciones() {
-    const { data, error } = await this.supabase.client
-      .from('funciones')
-      .select('*, peliculas(*), salas(*)');
-
-    if (error) throw error;
-    return data || [];
-  }
-
   async cambiarVisibilidadPelicula(id: number, activa: boolean) {
     const { data, error } = await this.supabase.client
       .from('peliculas')
@@ -109,16 +140,6 @@ export class PeliculasService {
       throw error;
     }
     return data;
-  }
-
-  async obtenerPeliculasActivas() {
-    const { data, error } = await this.supabase.client
-      .from('peliculas')
-      .select('*')
-      .or('activa.eq.true,activa.is.null');
-
-    if (error) throw error;
-    return data || [];
   }
 
   async obtenerTopPeliculasMasVendidas() {
@@ -159,7 +180,7 @@ export class PeliculasService {
     const { data, error } = await this.supabase.client
       .from('peliculas')
       .select('*')
-      .gt('fecha_estreno', hoy) //mayor a 
+      .gt('fecha_estreno', hoy)
       .order('fecha_estreno', { ascending: true });
 
     if (error) {
@@ -178,7 +199,49 @@ export class PeliculasService {
     return data;
   }
 
-  // --- CANDY BAR ---
+  // --- SALAS Y FUNCIONES (ADMIN) ---
+
+  async obtenerSalas() {
+    const { data, error } = await this.supabase.client.from('salas').select('*');
+    if (error) throw error;
+    return data || [];
+  }
+
+  async obtenerFuncionesPorSala(salaId: number) {
+    const { data, error } = await this.supabase.client
+      .from('funciones')
+      .select('*, peliculas(duracion_minutos)')
+      .eq('sala_id', salaId);
+    if (error) throw error;
+    return data || [];
+  }
+
+  async guardarFuncion(funcion: {
+    pelicula_id: number;
+    sala_id: number;
+    fecha_hora: string;
+    formato: string;
+    idioma: string;
+    precio_base?: number;
+  }) {
+    const { data, error } = await this.supabase.client.from('funciones').insert([funcion]).select();
+    if (error) throw error;
+    return data;
+  }
+
+  async agregarFuncion(funcion: any) {
+    return this.guardarFuncion(funcion);
+  }
+
+  async obtenerFunciones() {
+    const { data, error } = await this.supabase.client
+      .from('funciones')
+      .select('*, peliculas(*), salas(*)');
+    if (error) throw error;
+    return data || [];
+  }
+
+  // --- CANDY BAR (ADMIN & CLIENTE) ---
 
   async obtenerProductosCandy() {
     const { data, error } = await this.supabase.client
@@ -208,7 +271,7 @@ export class PeliculasService {
       precio: producto.precio,
       categoria: producto.categoria,
       imagen_url: producto.imagen_url || '',
-      es_combo: producto.es_combo || false
+      es_combo: producto.es_combo || false,
     };
 
     if (producto.id) {
@@ -245,16 +308,22 @@ export class PeliculasService {
     return data;
   }
 
-  // --- REGISTRO DE COMPRA (SOLO BUTACAS_OCUPADAS) ---
+  // --- RESERVAS & COMPRAS ---
 
-  async guardarCompra(compra: {
-    funcion_id: number;
-    butacas: any[];
-  }) {
-    const reservas = compra.butacas.map(b => ({
+  async guardarCompra(compra: { funcion_id: number; butacas: any[] }) {
+    const sessionId = sessionStorage.getItem('cine_session_id') || 'sess-defecto';
+    const usuarioStorage = localStorage.getItem('usuario_logueado');
+    let email = null;
+    if (usuarioStorage) {
+      try { email = JSON.parse(usuarioStorage).email; } catch (e) {}
+    }
+
+    const reservas = compra.butacas.map((b) => ({
       funcion_id: Number(compra.funcion_id),
       fila: String(b.fila),
-      numero: Number(b.numero)
+      numero: Number(b.numero),
+      session_id: sessionId,
+      usuario_email: email
     }));
 
     const { data, error } = await this.supabase.client
@@ -262,11 +331,7 @@ export class PeliculasService {
       .insert(reservas)
       .select();
 
-    if (error) {
-      console.error('Error al insertar en butacas_ocupadas:', error);
-      throw error;
-    }
-
+    if (error) throw error;
     return data;
   }
 }

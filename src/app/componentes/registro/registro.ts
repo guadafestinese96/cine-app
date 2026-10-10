@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { SupabaseService } from '../../services/supabase';
 
+//Directiva Componente - plantilla visual
 @Component({
   selector: 'app-registro',
   standalone: true,

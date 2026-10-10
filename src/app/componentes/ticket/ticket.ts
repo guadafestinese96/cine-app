@@ -28,6 +28,7 @@ export class TicketComponent implements OnInit {
   usuarioLogueado: any = null;
   compraFinalizada = false;
   codigoQR = '';
+  puntosGanadosEstaCompra = 0;
   
   cargando = false;
 
@@ -92,7 +93,6 @@ export class TicketComponent implements OnInit {
         console.error('Error al leer datos del usuario:', e);
       }
     } else {
-      // Si es anónimo, borramos cualquier descuento acumulado
       this.porcentajeDescuento = 0;
       localStorage.removeItem('descuento_aplicado');
     }
@@ -169,9 +169,26 @@ export class TicketComponent implements OnInit {
         butacas: this.butacasSeleccionadas
       });
 
+      // Puntos de Fidelidad ($1 gastado = 1 punto)
+      this.puntosGanadosEstaCompra = Math.floor(this.totalPagar);
+
       if (this.usuarioLogueado) {
         this.usuarioLogueado.primer_compra_realizada = true;
+        
+        // Sumar puntos acumulados
+        const puntosAnteriores = Number(this.usuarioLogueado.puntos_fidelidad || this.usuarioLogueado.puntos || 0);
+        const nuevosPuntos = puntosAnteriores + this.puntosGanadosEstaCompra;
+        
+        this.usuarioLogueado.puntos_fidelidad = nuevosPuntos;
+        this.usuarioLogueado.puntos = nuevosPuntos;
+
+        // Persistir en LocalStorage
         localStorage.setItem('usuario_logueado', JSON.stringify(this.usuarioLogueado));
+
+        const puntosGlobales = JSON.parse(localStorage.getItem('puntos_fidelidad_usuarios') || '{}');
+        const emailKey = this.usuarioLogueado.email || 'defecto';
+        puntosGlobales[emailKey] = nuevosPuntos;
+        localStorage.setItem('puntos_fidelidad_usuarios', JSON.stringify(puntosGlobales));
       }
 
       const nuevaCompra = {
@@ -182,6 +199,7 @@ export class TicketComponent implements OnInit {
         fecha_hora: this.funcionSeleccionada?.fecha_hora,
         monto: this.totalPagar,
         butacas: this.butacasSeleccionadas.map(b => `${b.fila}${b.numero}`),
+        puntosGanados: this.puntosGanadosEstaCompra,
         cancelada: false
       };
 

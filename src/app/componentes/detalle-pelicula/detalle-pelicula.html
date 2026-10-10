@@ -1,0 +1,71 @@
+<div class="detalle-container" *ngIf="!cargando && pelicula">
+  
+  <!-- CABECERA DE LA PELÍCULA -->
+  <div class="pelicula-card-header">
+    <img 
+      [src]="pelicula.imagen_url || 'https://via.placeholder.com/300x450?text=Sin+Imagen'" 
+      [alt]="pelicula.nombre || pelicula.titulo"
+      class="poster-img"
+    />
+
+    <div class="pelicula-info">
+      <h1 class="pelicula-titulo">{{ pelicula.nombre || pelicula.titulo }}</h1>
+      
+      <div class="badges-info">
+        <span class="badge-tag" *ngIf="pelicula.clasificacion || pelicula.restriccion_edad">
+          {{ pelicula.clasificacion || pelicula.restriccion_edad }}
+        </span>
+        <span class="badge-tag" *ngIf="pelicula.duracion_minutos || pelicula.duracion">
+          ⏱️ {{ pelicula.duracion_minutos || pelicula.duracion }} min
+        </span>
+      </div>
+
+      <p class="sinopsis" *ngIf="pelicula.sinopsis">
+        {{ pelicula.sinopsis }}
+      </p>
+
+      <p class="meta-dato" *ngIf="pelicula.fecha_estreno">
+        <strong>Estreno:</strong> {{ pelicula.fecha_estreno | date: 'dd/MM/yyyy' }}
+      </p>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- SECCIÓN DE FUNCIONES Y HORARIOS -->
+  <section class="funciones-section">
+    <h2>📅 Funciones Disponibles</h2>
+
+    <div class="funciones-grid" *ngIf="funciones.length > 0; else sinFunciones">
+      <div *ngFor="let f of funciones" class="card-funcion">
+        <div class="funcion-detalles">
+          <span class="funcion-fecha">
+            📅 {{ f.fecha_hora | date: 'dd/MM/yyyy - HH:mm' }}hs
+          </span>
+          <span class="funcion-sala">
+            🍿 {{ f.salas?.nombre || 'Sala ' + (f.sala_id || 1) }}
+          </span>
+          <span class="funcion-formato">
+            🎬 {{ f.formato || '2D' }} ({{ f.idioma || 'Castellano' }})
+          </span>
+        </div>
+
+        <button (click)="seleccionarFuncion(f)" class="btn-seleccionar-funcion">
+          Seleccionar Horario
+        </button>
+      </div>
+    </div>
+
+    <ng-template #sinFunciones>
+      <div class="mensaje-sin-funciones">
+        <p>No hay funciones programadas para esta película en este momento.</p>
+      </div>
+    </ng-template>
+  </section>
+
+</div>
+
+<!-- SPINNER / ESTADO DE CARGA -->
+<div *ngIf="cargando" class="cargando-container">
+  <p>Cargando funciones disponibles...</p>
+</div>
