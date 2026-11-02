@@ -1,18 +1,52 @@
-@media print {
-  /* Ocultar la barra de navegación superior y los botones al generar el PDF */
-  app-navbar,
-  .no-print {
-    display: none !important;
-  }
+.encabezado { text-align: center; margin-bottom: 28px; }
+.encabezado h1 { margin-bottom: 8px; }
+.alerta-adulto { max-width: 520px; margin: 0 auto 10px; }
 
-  body {
-    background: white;
-  }
-
-  #seccion-ticket {
-    border: none !important;
-    box-shadow: none !important;
-    margin: 0 !important;
-    width: 100% !important;
-  }
+.ticket {
+  --corte: 64%;
+  max-width: 440px;
+  margin: 0 auto;
+  box-shadow: 0 30px 60px -25px #000;
+  animation: imprimir 0.6s ease-out;
 }
+@keyframes imprimir { from { transform: translateY(-16px); opacity: 0; } }
+
+.ticket-arriba { padding: 26px 26px 20px; }
+.marca { font-family: var(--fuente-titulo); color: var(--terciopelo); font-size: 1.1rem; }
+.ticket h2 { font-size: 1.6rem; margin: 6px 0 18px; line-height: 1.15; }
+.datos { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px; }
+.datos .ancho { grid-column: 1 / -1; }
+.datos dt { font-size: 0.75rem; color: #7a5a5a; font-weight: 700; }
+.datos dd { margin: 2px 0 0; font-weight: 700; }
+.butacas { display: flex; flex-wrap: wrap; gap: 6px; }
+.butaca { padding: 2px 8px; border-radius: 4px; background: var(--terciopelo); color: var(--marfil); font-size: 0.85rem; }
+.butaca.vip { background: var(--vip); }
+.butaca.adaptada { background: var(--accesible); color: #04262c; }
+.item { display: block; font-weight: 600; }
+.adulto {
+  margin-top: 16px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #fdecc8;
+  color: #784000;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.ticket-abajo { padding: 22px 26px 26px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.ticket-abajo img { width: 200px; height: 200px; }
+.codigo { font-family: ui-monospace, 'Cascadia Mono', monospace; font-size: 1.15rem; font-weight: 800; letter-spacing: 0.08em; }
+.estados { list-style: none; margin: 0; padding: 0; font-size: 0.85rem; color: #7a5a5a; text-align: center; }
+.estados li.hecho { text-decoration: line-through; }
+.sello {
+  font-family: var(--fuente-titulo);
+  font-size: 2rem;
+  color: #b0302a;
+  border: 3px solid currentColor;
+  padding: 6px 18px;
+  transform: rotate(-8deg);
+}
+.cancelada .ticket-arriba { opacity: 0.55; }
+
+.acciones { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-top: 28px; }
+.pie { text-align: center; margin-top: 14px; font-size: 0.88rem; }

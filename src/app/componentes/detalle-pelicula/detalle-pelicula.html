@@ -1,71 +1,136 @@
-<div class="detalle-container" *ngIf="!cargando && pelicula">
-  
-  <!-- CABECERA DE LA PELÍCULA -->
-  <div class="pelicula-card-header">
-    <img 
-      [src]="pelicula.imagen_url || 'https://via.placeholder.com/300x450?text=Sin+Imagen'" 
-      [alt]="pelicula.nombre || pelicula.titulo"
-      class="poster-img"
-    />
-
-    <div class="pelicula-info">
-      <h1 class="pelicula-titulo">{{ pelicula.nombre || pelicula.titulo }}</h1>
-      
-      <div class="badges-info">
-        <span class="badge-tag" *ngIf="pelicula.clasificacion || pelicula.restriccion_edad">
-          {{ pelicula.clasificacion || pelicula.restriccion_edad }}
-        </span>
-        <span class="badge-tag" *ngIf="pelicula.duracion_minutos || pelicula.duracion">
-          ⏱️ {{ pelicula.duracion_minutos || pelicula.duracion }} min
-        </span>
-      </div>
-
-      <p class="sinopsis" *ngIf="pelicula.sinopsis">
-        {{ pelicula.sinopsis }}
-      </p>
-
-      <p class="meta-dato" *ngIf="pelicula.fecha_estreno">
-        <strong>Estreno:</strong> {{ pelicula.fecha_estreno | date: 'dd/MM/yyyy' }}
-      </p>
+@if (cargando()) {
+  <div class="contenedor pagina"><p class="texto-suave">Cargando película…</p></div>
+} @else if (!pelicula()) {
+  <div class="contenedor pagina">
+    <div class="vacio">
+      <p>No encontramos esa película.</p>
+      <a routerLink="/catalogo" class="boton secundario chico">Volver a la cartelera</a>
     </div>
   </div>
-
-  <hr class="divider" />
-
-  <!-- SECCIÓN DE FUNCIONES Y HORARIOS -->
-  <section class="funciones-section">
-    <h2>📅 Funciones Disponibles</h2>
-
-    <div class="funciones-grid" *ngIf="funciones.length > 0; else sinFunciones">
-      <div *ngFor="let f of funciones" class="card-funcion">
-        <div class="funcion-detalles">
-          <span class="funcion-fecha">
-            📅 {{ f.fecha_hora | date: 'dd/MM/yyyy - HH:mm' }}hs
-          </span>
-          <span class="funcion-sala">
-            🍿 {{ f.salas?.nombre || 'Sala ' + (f.sala_id || 1) }}
-          </span>
-          <span class="funcion-formato">
-            🎬 {{ f.formato || '2D' }} ({{ f.idioma || 'Castellano' }})
-          </span>
+} @else {
+  @let p = pelicula()!;
+  <section class="cabecera" [style.--fondo-poster]="'url(' + p.imagen_url + ')'">
+    <div class="contenedor cabecera-interior">
+      <img class="poster" [src]="p.imagen_url" [respaldo]="p.nombre" [alt]="'Póster de ' + p.nombre" />
+      <div class="info">
+        <a routerLink="/catalogo" class="volver">Cartelera</a>
+        <h1>{{ p.nombre }}</h1>
+        <div class="datos">
+          <span class="etiqueta-clasif" [class.restringida]="restriccion() > 0">{{ p.clasificacion }}</span>
+          <span>{{ p.duracion_minutos }} min</span>
+          @if (generos().length) {
+            <span>{{ generos().join(', ') }}</span>
+          }
         </div>
-
-        <button (click)="seleccionarFuncion(f)" class="btn-seleccionar-funcion">
-          Seleccionar Horario
-        </button>
+        @if (puntaje(); as pt) {
+          <a href="#resenas" class="resumen-puntaje">
+            <app-estrellas [valor]="pt.promedio" style="--tam: 1.25rem" />
+            <strong class="numero">{{ pt.promedio.toFixed(1) }}</strong>
+            <span class="texto-suave">{{ pt.cantidad }} {{ pt.cantidad === 1 ? 'reseña' : 'reseñas' }}</span>
+          </a>
+        }
+        <p class="sinopsis">{{ p.sinopsis }}</p>
+        @if (restriccion() > 0) {
+          <p class="mensaje info">
+            Apta para mayores de {{ restriccion() }} años. Las cuentas de menores no pueden comprarla
+            y toda entrada indica que se debe ingresar con un adulto.
+          </p>
+        }
       </div>
     </div>
-
-    <ng-template #sinFunciones>
-      <div class="mensaje-sin-funciones">
-        <p>No hay funciones programadas para esta película en este momento.</p>
-      </div>
-    </ng-template>
   </section>
 
-</div>
+  <div class="contenedor pagina cuerpo">
+    <!-- Horarios -->
+    <section class="horarios" aria-labelledby="titulo-horarios">
+      <h2 class="titulo-seccion" id="titulo-horarios">Horarios</h2>
 
-<!-- SPINNER / ESTADO DE CARGA -->
-<div *ngIf="cargando" class="cargando-container">
-  <p>Cargando funciones disponibles...</p>
-</div>
+      @if (estado() === 'preventa') {
+        <p class="mensaje info">
+          Preventa: entradas a ${{ p.precio_preventa }} hasta el estreno del {{ estreno() | date: "d 'de' MMMM" }}.
+        </p>
+      }
+
+      @if (!enVenta()) {
+        <div class="vacio">
+          <p>Estrena el {{ estreno() | date: "EEEE d 'de' MMMM" }}. Las entradas todavía no están a la venta.</p>
+          <a routerLink="/catalogo" fragment="proximamente" class="boton secundario chico">Activar aviso en Próximamente</a>
+        </div>
+      } @else if (!funciones().length) {
+        <div class="vacio">No hay funciones programadas por ahora.</div>
+      } @else {
+        @if (formatos().length > 1) {
+          <div class="fichas filtro-formato" role="group" aria-label="Formato e idioma">
+            <button type="button" class="ficha" [attr.aria-pressed]="!formatoElegido()" (click)="formatoElegido.set('')">Todos</button>
+            @for (fmt of formatos(); track fmt) {
+              <button type="button" class="ficha" [attr.aria-pressed]="formatoElegido() === fmt" (click)="formatoElegido.set(fmt)">{{ fmt }}</button>
+            }
+          </div>
+        }
+
+        <div class="dias" role="tablist" aria-label="Día">
+          @for (d of dias(); track d.clave) {
+            <button type="button" role="tab" class="dia" [attr.aria-selected]="diaActivo() === d.clave" (click)="diaElegido.set(d.clave)">
+              {{ d.etiqueta }}
+              <small class="numero">{{ d.funciones.length }} {{ d.funciones.length === 1 ? 'función' : 'funciones' }}</small>
+            </button>
+          }
+        </div>
+
+        <ul class="lista-funciones">
+          @for (f of funcionesDelDia(); track f.id) {
+            <li>
+              <button type="button" class="funcion" (click)="elegirFuncion(f)">
+                <span class="hora numero">{{ hora(f) }}</span>
+                <span class="detalle">
+                  <strong>{{ f.formato }} · {{ f.idioma }}</strong>
+                  <span class="texto-suave">{{ f.salas?.nombre ?? 'Sala ' + f.sala_id }}</span>
+                </span>
+                <span class="precio numero">${{ precio(f) }}</span>
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+
+    <!-- Reseñas -->
+    <section class="resenas" id="resenas" aria-labelledby="titulo-resenas">
+      <h2 class="titulo-seccion" id="titulo-resenas">Reseñas</h2>
+
+      @if (auth.usuarioActual()) {
+        <form class="panel mi-resena" (submit)="$event.preventDefault(); publicarResena()">
+          <span class="etiqueta">{{ miResena() ? 'Tu reseña' : '¿La viste? Calificala' }}</span>
+          <app-estrellas [valor]="miEstrellas()" [editable]="true" etiqueta="Tu calificación" (cambio)="miEstrellas.set($event)" />
+          <textarea class="entrada" maxlength="280" rows="3" placeholder="Un comentario corto (opcional)"
+            [value]="miComentario()" (input)="miComentario.set($any($event.target).value)"></textarea>
+          <div class="pie-resena">
+            <span class="texto-suave numero">{{ miComentario().length }}/280</span>
+            <button class="boton chico" type="submit" [disabled]="!miEstrellas() || guardandoResena()">
+              {{ miResena() ? 'Actualizar reseña' : 'Publicar reseña' }}
+            </button>
+          </div>
+        </form>
+      } @else {
+        <p class="texto-suave"><a routerLink="/login">Iniciá sesión</a> para dejar tu reseña.</p>
+      }
+
+      <ul class="lista-resenas">
+        @for (r of resenas(); track r.id) {
+          <li>
+            <div class="resena-cabecera">
+              <strong>{{ r.autor }}</strong>
+              <app-estrellas [valor]="r.estrellas" />
+            </div>
+            @if (r.comentario) {
+              <p>{{ r.comentario }}</p>
+            }
+            <small class="texto-suave">{{ r.created_at | date: 'd/M/yyyy' }}</small>
+          </li>
+        } @empty {
+          <li class="texto-suave">Todavía nadie dejó su reseña.</li>
+        }
+      </ul>
+    </section>
+  </div>
+}

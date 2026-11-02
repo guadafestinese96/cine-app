@@ -1,0 +1,126 @@
+:host {
+  display: block;
+  --b: clamp(18px, 2.4vw, 26px);
+}
+
+.sala {
+  overflow-x: auto;
+  padding: 8px 4px 16px;
+  scrollbar-color: var(--bronce) transparent;
+}
+
+.pantalla {
+  width: min(70%, 640px);
+  margin: 0 auto 28px;
+  height: 34px;
+  border-top: 4px solid var(--bronce-claro);
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  text-align: center;
+  box-shadow: 0 -14px 30px -10px rgba(240, 206, 126, 0.45);
+}
+.pantalla span {
+  position: relative;
+  top: 6px;
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  color: var(--texto-suave);
+}
+
+.plano {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: max-content;
+  margin: 0 auto;
+}
+
+.fila {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--b) * 0.9);
+}
+.fila.separada { margin-top: 10px; }
+
+.letra {
+  width: 16px;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--texto-suave);
+}
+
+.bloque { display: flex; gap: 3px; }
+
+.butaca,
+.hueco {
+  width: var(--b);
+  height: var(--b);
+  flex: none;
+}
+
+.butaca {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 7px 7px 3px 3px;
+  font: 700 calc(var(--b) * 0.42) / 1 var(--fuente);
+  cursor: pointer;
+  color: rgba(246, 236, 221, 0.75);
+  background: #7a2335;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.3);
+  transition: transform 0.1s, background-color 0.15s;
+}
+.butaca:hover:not(:disabled) { transform: translateY(-2px); background: #93304a; }
+
+.butaca.vip { background: var(--vip); box-shadow: inset 0 3px 0 var(--bronce), inset 0 -3px 0 rgba(0, 0, 0, 0.3); }
+.butaca.vip:hover:not(:disabled) { background: #91529f; }
+.butaca.adaptada { background: var(--accesible); color: #04262c; }
+.butaca.adaptada:hover:not(:disabled) { background: #56bccd; }
+
+.butaca.mia {
+  background: var(--bronce-claro);
+  color: var(--tinta);
+  box-shadow: 0 0 0 2px var(--marfil), 0 0 14px rgba(240, 206, 126, 0.7);
+}
+
+.butaca.ocupada,
+.butaca.bloqueada {
+  background: #3a141c;
+  color: transparent;
+  box-shadow: none;
+  cursor: not-allowed;
+  position: relative;
+}
+.butaca.ocupada::after,
+.butaca.bloqueada::after {
+  content: '×';
+  position: absolute;
+  color: rgba(201, 179, 166, 0.45);
+  font-size: calc(var(--b) * 0.7);
+}
+/* En modo admin las bloqueadas se pueden volver a tocar */
+.butaca.bloqueada:not(:disabled) { cursor: pointer; outline: 1px dashed var(--error); }
+
+.leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 22px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+  color: var(--texto-suave);
+}
+.leyenda li { display: flex; align-items: center; gap: 8px; }
+.muestra {
+  width: 16px;
+  height: 16px;
+  border-radius: 5px 5px 2px 2px;
+  background: #7a2335;
+}
+.muestra.mia { background: var(--bronce-claro); }
+.muestra.ocupada { background: #3a141c; border: 1px solid rgba(201, 179, 166, 0.3); }
+.muestra.adaptada { background: var(--accesible); }
+.muestra.vip { background: var(--vip); box-shadow: inset 0 3px 0 var(--bronce); }

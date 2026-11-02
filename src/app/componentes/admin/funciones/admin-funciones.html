@@ -1,0 +1,150 @@
+<div class="admin-dos">
+  <section class="panel">
+    <h2 class="admin-titulo">Programar funciones</h2>
+    <p class="texto-suave" style="margin-bottom: 18px; font-size: 0.9rem">
+      Elegí días y horarios: el sistema asigna la sala libre, dejando 30 minutos de limpieza entre funciones.
+    </p>
+
+    <div class="campo">
+      <label for="f-pelicula">Película</label>
+      <select id="f-pelicula" class="entrada" [ngModel]="peliculaId()" (ngModelChange)="peliculaId.set($event); plan.set([])">
+        <option [ngValue]="null">Elegí una película</option>
+        @for (p of peliculas(); track p.id) {
+          <option [ngValue]="p.id">{{ p.nombre }} ({{ p.duracion_minutos }} min)</option>
+        }
+      </select>
+    </div>
+
+    <div class="fila-campos">
+      <div class="campo">
+        <span class="etiqueta">Formato</span>
+        <div class="fichas">
+          @for (f of formatos; track f) {
+            <button type="button" class="ficha" [class.activa]="formato() === f" (click)="formato.set(f)">{{ f }}</button>
+          }
+        </div>
+      </div>
+      <div class="campo">
+        <span class="etiqueta">Idioma</span>
+        <div class="fichas">
+          @for (i of idiomas; track i) {
+            <button type="button" class="ficha" [class.activa]="idioma() === i" (click)="idioma.set(i)">{{ i }}</button>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="campo">
+      <span class="etiqueta">Días de la semana</span>
+      <div class="fichas">
+        @for (d of diasSemana; track d.n) {
+          <button type="button" class="ficha" [attr.aria-pressed]="dias().includes(d.n)" (click)="alternarDia(d.n)">{{ d.corto }}</button>
+        }
+      </div>
+      <div class="fichas" style="margin-top: 6px">
+        <button type="button" class="boton fantasma chico" (click)="diasAtajo('todos')">Todos</button>
+        <button type="button" class="boton fantasma chico" (click)="diasAtajo('semana')">Lunes a viernes</button>
+        <button type="button" class="boton fantasma chico" (click)="diasAtajo('finde')">Vie a dom</button>
+      </div>
+    </div>
+
+    <div class="campo">
+      <span class="etiqueta">Horarios</span>
+      <div class="fichas">
+        @for (h of horariosFrecuentes; track h) {
+          <button type="button" class="ficha numero" [attr.aria-pressed]="horas().includes(h)" (click)="alternarHora(h)">{{ h }}</button>
+        }
+        @for (h of horas(); track h) {
+          @if (!horariosFrecuentes.includes(h)) {
+            <button type="button" class="ficha numero" aria-pressed="true" (click)="alternarHora(h)">{{ h }}</button>
+          }
+        }
+      </div>
+      <form class="hora-libre" (submit)="$event.preventDefault(); agregarHoraLibre()">
+        <input class="entrada numero" inputmode="numeric" placeholder="18:45" aria-label="Otro horario"
+          [value]="horaLibre()" (input)="horaLibre.set($any($event.target).value)" />
+        <button class="boton secundario chico" type="submit">Agregar horario</button>
+      </form>
+    </div>
+
+    <div class="campo">
+      <span class="etiqueta">Desde</span>
+      <app-campo-fecha [(ngModel)]="desde" etiqueta="Fecha de inicio" [atajos]="atajosDesde" (ngModelChange)="plan.set([])" />
+    </div>
+
+    <div class="fila-campos">
+      <div class="campo">
+        <span class="etiqueta">Durante</span>
+        <div class="fichas">
+          @for (s of [1, 2, 3, 4]; track s) {
+            <button type="button" class="ficha" [class.activa]="semanas() === s" (click)="semanas.set(s); plan.set([])">{{ s }} {{ s === 1 ? 'semana' : 'semanas' }}</button>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="campo">
+      <span class="etiqueta">Sala</span>
+      <div class="fichas">
+        <button type="button" class="ficha" [class.activa]="salaFija() === null" (click)="salaFija.set(null); plan.set([])">Automática</button>
+        @for (s of salas(); track s.id) {
+          <button type="button" class="ficha" [class.activa]="salaFija() === s.id" (click)="salaFija.set(s.id); plan.set([])">{{ s.nombre }}</button>
+        }
+      </div>
+    </div>
+
+    <div class="campo">
+      <label for="f-precio">Precio de la entrada general ($)</label>
+      <input id="f-precio" class="entrada" type="number" inputmode="numeric" [(ngModel)]="precio" [placeholder]="'General: $' + config.valores().precio_entrada" />
+      <span class="ayuda">Vacío = precio general. VIP suma {{ config.valores().recargo_vip_pct }}%.</span>
+    </div>
+
+    <button type="button" class="boton ancho" (click)="previsualizar()">Ver vista previa</button>
+
+    @if (plan().length) {
+      <div class="vista-previa">
+        <strong>{{ validas() }} de {{ plan().length }} funciones se pueden programar</strong>
+        <ul class="plan">
+          @for (p of plan(); track p.inicio.getTime()) {
+            <li [class.problema]="p.problema">
+              <span>{{ textoPlan(p) }}</span>
+              <span>{{ p.problema ?? p.salaNombre }}</span>
+            </li>
+          }
+        </ul>
+        <button type="button" class="boton ancho" [disabled]="!validas() || guardando()" (click)="confirmar()">
+          {{ guardando() ? 'Programando…' : 'Programar ' + validas() + ' funciones' }}
+        </button>
+      </div>
+    }
+  </section>
+
+  <section>
+    <div class="campo">
+      <select class="entrada" aria-label="Filtrar por película" [ngModel]="filtroPelicula()" (ngModelChange)="filtroPelicula.set($event)">
+        <option [ngValue]="null">Todas las películas</option>
+        @for (p of peliculas(); track p.id) {
+          <option [ngValue]="p.id">{{ p.nombre }}</option>
+        }
+      </select>
+    </div>
+    @for (d of proximas(); track d.etiqueta) {
+      <h3 class="dia-titulo">{{ d.etiqueta }}</h3>
+      @for (f of d.funciones; track f.id) {
+        <div class="admin-fila">
+          <span class="hora numero">{{ hora(f) }}</span>
+          <div class="crece">
+            <strong>{{ f.peliculas?.nombre }}</strong>
+            <span>{{ f.salas?.nombre ?? 'Sala ' + f.sala_id }} · {{ f.formato }} {{ f.idioma }}</span>
+          </div>
+          <input #precioInput class="entrada precio-funcion numero" type="number" [value]="f.precio_base ?? ''"
+            [placeholder]="'$' + config.valores().precio_entrada" aria-label="Precio de esta función"
+            (change)="guardarPrecio(f, precioInput.value)" />
+          <button type="button" class="boton fantasma chico" (click)="eliminar(f)" aria-label="Eliminar función">Eliminar</button>
+        </div>
+      }
+    } @empty {
+      <p class="vacio">No hay funciones programadas.</p>
+    }
+  </section>
+</div>

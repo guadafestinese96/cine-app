@@ -1,16 +1,12 @@
 import { inject } from '@angular/core';
-import { Router, CanActivateFn } from '@angular/router';
+import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '../services/auth';
 
-export const authGuard: CanActivateFn = (route, state) => {
-  const authService = inject(AuthService);
+/** Solo usuarios con sesión iniciada. Vuelve a la página pedida después del login. */
+export const authGuard: CanActivateFn = async (_route, state) => {
+  const auth = inject(AuthService);
   const router = inject(Router);
-
-  if (authService.estaAutenticado()) {
-    return true;
-  }
-
-  // Redirigir a /login si no está autenticado
-  router.navigate(['/login']);
-  return false;
+  await auth.esperarInicio();
+  if (auth.estaAutenticado()) return true;
+  return router.createUrlTree(['/login'], { queryParams: { volver: state.url } });
 };

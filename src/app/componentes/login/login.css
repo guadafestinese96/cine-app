@@ -1,0 +1,6 @@
+.acceso { display: flex; justify-content: center; }
+.tarjeta-acceso { width: 100%; max-width: 440px; }
+.tarjeta-acceso h1 { margin-bottom: 8px; }
+.tarjeta-acceso > p.texto-suave { margin-bottom: 26px; }
+.mensaje { margin-bottom: 16px; }
+.alternativa { margin-top: 22px; font-size: 0.92rem; text-align: center; }

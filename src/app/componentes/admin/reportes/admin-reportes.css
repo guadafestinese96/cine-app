@@ -1,0 +1,78 @@
+.bloque { margin-bottom: 28px; }
+.cabecera { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
+.cabecera .admin-titulo { margin: 0; }
+.controles { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 0 0 18px; }
+.kpis div { padding: 14px 16px; border-radius: var(--radio-sm); background: rgba(0, 0, 0, 0.2); }
+.kpis dt { font-size: 0.8rem; color: var(--texto-suave); }
+.kpis dd { margin: 4px 0 0; font-size: 1.6rem; font-weight: 800; }
+
+.pestanas.mini { margin-bottom: 16px; }
+.pestanas.mini button { padding: 8px 12px; font-size: 0.88rem; }
+
+/* Columnas: una serie (facturación), sin leyenda; los valores están en el tooltip y en la tabla */
+.columnas {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 240px;
+  padding: 0 0 22px;
+  border-bottom: 1px solid var(--linea-fuerte);
+  position: relative;
+}
+.columna {
+  position: relative;
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  cursor: default;
+}
+.barra {
+  width: min(70%, 22px);
+  min-height: 2px;
+  border-radius: 4px 4px 0 0;
+  background: var(--bronce);
+}
+.columna:hover .barra { background: var(--bronce-claro); }
+.columnas.densas .barra { width: 80%; }
+.eje {
+  position: absolute;
+  bottom: -20px;
+  font-size: 0.7rem;
+  color: var(--texto-suave);
+  white-space: nowrap;
+}
+.dato {
+  display: none;
+  position: absolute;
+  bottom: calc(100% - 40px);
+  z-index: 2;
+  flex-direction: column;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--marfil);
+  color: var(--tinta);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  box-shadow: var(--sombra);
+  pointer-events: none;
+}
+.columna:hover .dato { display: flex; }
+
+.periodo { margin: 8px 0 16px; }
+.navegar { display: flex; align-items: center; gap: 8px; }
+.nombre-periodo { min-width: 220px; text-align: center; }
+.nombre-periodo::first-letter { text-transform: uppercase; }
+
+.rankings { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; }
+.destacado { margin-bottom: 14px; font-size: 0.95rem; }
+.ranking { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.ranking li { display: grid; grid-template-columns: minmax(120px, 1.2fr) 2fr 40px; align-items: center; gap: 12px; font-size: 0.9rem; }
+.nombre { display: flex; gap: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pos { color: var(--texto-suave); width: 14px; flex: none; }
+.pista { height: 10px; border-radius: 4px; background: rgba(0, 0, 0, 0.25); overflow: hidden; }
+.relleno { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--bronce); }
+.valor { text-align: right; font-weight: 800; }

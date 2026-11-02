@@ -1,0 +1,114 @@
+<div class="admin-dos bloque">
+  <form class="panel" [formGroup]="formCombo" (ngSubmit)="guardarCombo()" novalidate>
+    <h2 class="admin-titulo">{{ comboEditando() ? 'Editar combo' : 'Nuevo combo con entrada' }}</h2>
+    <p class="texto-suave" style="font-size: 0.85rem; margin-bottom: 14px">
+      Precio fijo que incluye una entrada general. Se muestra destacado en la compra.
+    </p>
+    <div class="campo">
+      <label for="c-nombre">Nombre</label>
+      <input id="c-nombre" class="entrada" formControlName="nombre" placeholder="Combo Clásico" />
+    </div>
+    <div class="campo">
+      <label for="c-incluye">Qué incluye</label>
+      <input id="c-incluye" class="entrada" formControlName="incluye" />
+    </div>
+    <div class="campo">
+      <label for="c-desc">Descripción</label>
+      <input id="c-desc" class="entrada" formControlName="descripcion" />
+    </div>
+    <div class="fila-campos">
+      <div class="campo">
+        <label for="c-precio">Precio fijo ($)</label>
+        <input id="c-precio" class="entrada" type="number" inputmode="numeric" formControlName="precio" />
+      </div>
+      <div class="campo">
+        <label for="c-img">URL de imagen</label>
+        <input id="c-img" class="entrada" formControlName="imagen_url" />
+      </div>
+    </div>
+    <div class="acciones-form">
+      <button class="boton" type="submit">{{ comboEditando() ? 'Guardar combo' : 'Crear combo' }}</button>
+      @if (comboEditando()) {
+        <button type="button" class="boton fantasma" (click)="nuevoCombo()">Cancelar</button>
+      }
+    </div>
+  </form>
+
+  <section>
+    <h2 class="admin-titulo">Combos</h2>
+    @for (c of combos(); track c.id) {
+      <div class="admin-fila" [class.apagada]="c.activo === false">
+        <div class="crece">
+          <strong>{{ c.nombre }} · ${{ c.precio }}</strong>
+          <span>{{ c.incluye }}</span>
+        </div>
+        <button type="button" class="interruptor" [attr.aria-pressed]="c.activo !== false" (click)="alternarCombo(c)">
+          {{ c.activo !== false ? 'Disponible' : 'Oculto' }}
+        </button>
+        <button type="button" class="boton fantasma chico" (click)="editarCombo(c)">Editar</button>
+      </div>
+    } @empty {
+      <p class="vacio">Todavía no hay combos.</p>
+    }
+  </section>
+</div>
+
+<div class="admin-dos bloque">
+  <form class="panel" [formGroup]="formProducto" (ngSubmit)="guardarProducto()" novalidate>
+    <h2 class="admin-titulo">{{ productoEditando() ? 'Editar producto' : 'Nuevo producto' }}</h2>
+    <div class="campo">
+      <label for="pr-nombre">Nombre</label>
+      <input id="pr-nombre" class="entrada" formControlName="nombre" />
+    </div>
+    <div class="campo">
+      <label for="pr-desc">Descripción</label>
+      <input id="pr-desc" class="entrada" formControlName="descripcion" />
+    </div>
+    <div class="campo">
+      <span class="etiqueta">Categoría</span>
+      <div class="fichas">
+        @for (c of categorias(); track c) {
+          <button type="button" class="ficha" [class.activa]="formProducto.controls.categoria.value === c" (click)="formProducto.controls.categoria.setValue(c)">{{ c }}</button>
+        }
+      </div>
+      <input class="entrada" style="margin-top: 8px" formControlName="categoria" aria-label="Categoría (podés escribir una nueva)" placeholder="O escribí una categoría nueva" />
+    </div>
+    <div class="fila-campos">
+      <div class="campo">
+        <label for="pr-precio">Precio ($)</label>
+        <input id="pr-precio" class="entrada" type="number" inputmode="numeric" formControlName="precio" />
+      </div>
+      <div class="campo">
+        <label for="pr-img">URL de imagen</label>
+        <input id="pr-img" class="entrada" formControlName="imagen_url" />
+      </div>
+    </div>
+    <div class="acciones-form">
+      <button class="boton" type="submit">{{ productoEditando() ? 'Guardar producto' : 'Crear producto' }}</button>
+      @if (productoEditando()) {
+        <button type="button" class="boton fantasma" (click)="nuevoProducto()">Cancelar</button>
+      }
+    </div>
+  </form>
+
+  <section>
+    <h2 class="admin-titulo">Productos</h2>
+    @for (g of porCategoria(); track g.categoria) {
+      <h3 class="categoria">{{ g.categoria }}</h3>
+      @for (p of g.productos; track p.id) {
+        <div class="admin-fila" [class.apagada]="p.activo === false">
+          <div class="crece">
+            <strong>{{ p.nombre }} · ${{ p.precio }}</strong>
+            <span>{{ p.descripcion }}</span>
+          </div>
+          <button type="button" class="interruptor" [attr.aria-pressed]="p.activo !== false" (click)="alternarProducto(p)">
+            {{ p.activo !== false ? 'Disponible' : 'Agotado' }}
+          </button>
+          <button type="button" class="boton fantasma chico" (click)="editarProducto(p)">Editar</button>
+        </div>
+      }
+    } @empty {
+      <p class="vacio">Todavía no hay productos.</p>
+    }
+  </section>
+</div>

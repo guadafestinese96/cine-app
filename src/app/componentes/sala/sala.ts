@@ -1,354 +1,185 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Component, DestroyRef, computed, inject, input, signal } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
+import { FuncionesService } from '../../services/funciones';
 import { PeliculasService } from '../../services/peliculas';
-import { Subscription } from 'rxjs';
+import { ButacasService } from '../../services/butacas';
+import { ComprasService } from '../../services/compras';
+import { ConfiguracionService } from '../../services/configuracion';
+import { AuthService } from '../../services/auth';
+import { AvisosService } from '../../services/avisos';
+import { Asiento, SalaService } from '../../services/sala';
+import { MapaButacasComponent } from '../compartidos/mapa-butacas/mapa-butacas';
+import { ButacaElegida, Funcion } from '../../core/modelos';
+import { calcularEdad, clasificacionDe, dos, edadMinima, errorLegible, formatearFuncion, parsearFechaLocal } from '../../core/utilidades';
 
-interface Butaca {
-  fila: string;
-  numero: number;
-  tipo: 'estandar' | 'adaptada' | 'vip';
-  bloque: 'izquierdo' | 'centro' | 'derecho';
-  ocupada: boolean;
-  seleccionada: boolean;
-  precio: number;
-  reservadaPorOtro?: boolean;
-  esHueco?: boolean; // Para rellenar invisiblemente las filas adaptadas
-}
-
-interface FilaEstructurada {
-  letra: string;
-  izquierdo: Butaca[];
-  centro: Butaca[];
-  derecho: Butaca[];
-}
+export const MAXIMO_BUTACAS = 10;
 
 @Component({
   selector: 'app-sala',
-  standalone: true,
-  imports: [CommonModule],
+  imports: [RouterLink, MapaButacasComponent],
   templateUrl: './sala.html',
-  styleUrl: './sala.css'
+  styleUrl: './sala.css',
 })
-export class SalaComponent implements OnInit, OnDestroy {
-  // 20 Filas completas según requerimiento de la consigna
-  filas = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T'];
-  
-  filasEstructuradas: FilaEstructurada[] = [];
-  butacasSeleccionadas: Butaca[] = [];
-  
-  precioBase = 5000;
-  precioVip = 6500;
-  funcionSeleccionada: any = null;
-  funcionId: number = 1;
-  mensajeErrorEdad = '';
-  
-  sessionId: string = '';
-  usuarioEmail: string = '';
+export class SalaComponent {
+  private funcionesSrv = inject(FuncionesService);
+  private peliculasSrv = inject(PeliculasService);
+  private butacasSrv = inject(ButacasService);
+  private compras = inject(ComprasService);
+  private config = inject(ConfiguracionService);
+  private auth = inject(AuthService);
+  private avisos = inject(AvisosService);
+  private router = inject(Router);
+  private destroyRef = inject(DestroyRef);
+  salaSrv = inject(SalaService);
 
-  private realtimeSub!: Subscription;
+  funcionId = input.required<string>();
 
-  constructor(
-    private peliculasService: PeliculasService,
-    private router: Router,
-    private cdr: ChangeDetectorRef
-  ) {}
+  cargando = signal(true);
+  funcion = signal<Funcion | null>(null);
+  mias = signal<Set<string>>(new Set());
+  ocupadas = signal<Set<string>>(new Set());
+  vencimiento = signal<Date | null>(null);
+  ahora = signal(Date.now());
+  procesando = signal(false);
+  bloqueo = signal('');
+
+  readonly maximo = MAXIMO_BUTACAS;
+
+  pelicula = computed(() => this.funcion()?.peliculas);
+  clasificacion = computed(() => clasificacionDe(this.pelicula()));
+  restriccion = computed(() => edadMinima(this.clasificacion()));
+  esMenor = computed(() => {
+    const edad = calcularEdad(this.auth.usuarioActual()?.fecha_nacimiento);
+    return edad !== null && edad < 18;
+  });
+  bloqueadas = computed(() => this.funcion()?.salas?.butacas_bloqueadas ?? []);
+  precioEstandar = computed(() => this.peliculasSrv.precioEntrada(this.pelicula(), this.funcion()));
+  precioVip = computed(() => this.config.precioVip(this.precioEstandar()));
+  descripcionFuncion = computed(() => {
+    const f = this.funcion();
+    return f ? `${formatearFuncion(f.fecha_hora)} · ${f.salas?.nombre ?? 'Sala ' + f.sala_id} · ${f.formato} ${f.idioma}` : '';
+  });
+
+  elegidas = computed<ButacaElegida[]>(() => {
+    const ids = this.mias();
+    return this.salaSrv.plano
+      .flatMap((f) => f.bloques.flat())
+      .filter((a): a is Asiento => !!a && ids.has(a.id))
+      .map((a) => ({ fila: a.fila, numero: a.numero, tipo: a.tipo, precio: a.tipo === 'vip' ? this.precioVip() : this.precioEstandar() }));
+  });
+  total = computed(() => this.elegidas().reduce((t, b) => t + b.precio, 0));
+  hayVip = computed(() => this.elegidas().some((b) => b.tipo === 'vip'));
+
+  restante = computed(() => {
+    const v = this.vencimiento();
+    if (!v || !this.mias().size) return '';
+    const seg = Math.max(0, Math.floor((v.getTime() - this.ahora()) / 1000));
+    return `${Math.floor(seg / 60)}:${dos(seg % 60)}`;
+  });
 
   async ngOnInit() {
-    this.obtenerDatosSesion();
-    this.obtenerFuncionSeleccionada();
-    this.generarMapaBase();
-    await this.consultarButacasOcupadas();
-    this.iniciarSuscripcionRealtime();
-  }
-
-  ngOnDestroy(): void {
-    if (this.realtimeSub) {
-      this.realtimeSub.unsubscribe();
-    }
-    this.peliculasService.desconectarRealtime();
-  }
-
-  obtenerDatosSesion() {
-    this.sessionId = sessionStorage.getItem('cine_session_id') || 'sess-anonima';
-
-    const usuarioStorage = localStorage.getItem('usuario_logueado');
-    if (usuarioStorage) {
-      try {
-        const u = JSON.parse(usuarioStorage);
-        this.usuarioEmail = (u.email || '').toLowerCase().trim();
-      } catch (e) {
-        this.usuarioEmail = '';
+    const id = Number(this.funcionId());
+    try {
+      await this.config.cargar();
+      const funcion = await this.funcionesSrv.obtener(id);
+      if (!funcion || !funcion.peliculas) {
+        this.bloqueo.set('Esa función no existe.');
+        return;
       }
-    }
-  }
+      this.funcion.set(funcion);
+      this.compras.iniciar(id);
 
-  obtenerFuncionSeleccionada() {
-    const funcionGuardada = localStorage.getItem('funcion_seleccionada');
-    if (funcionGuardada) {
-      this.funcionSeleccionada = JSON.parse(funcionGuardada);
-      this.funcionId = this.funcionSeleccionada.id;
-      if (this.funcionSeleccionada.precio_base) {
-        this.precioBase = Number(this.funcionSeleccionada.precio_base);
+      if (parsearFechaLocal(funcion.fecha_hora).getTime() <= Date.now()) {
+        this.bloqueo.set('Esta función ya comenzó. Elegí otro horario.');
+        return;
       }
-    }
-    this.precioVip = Math.round(this.precioBase * 1.3);
-  }
-
-  generarMapaBase() {
-    this.filasEstructuradas = [];
-
-    for (const fila of this.filas) {
-      const esAdaptada = (fila === 'J' || fila === 'K');
-      const esVip = (fila === 'R' || fila === 'S' || fila === 'T');
-
-      const bloqueIzq: Butaca[] = [];
-      const bloqueCentro: Butaca[] = [];
-      const bloqueDer: Butaca[] = [];
-
-      if (esAdaptada) {
-        // Filas J y K (Adaptadas): 2 izq + 2 huecos, 5 huecos + 10 adaptadas + 5 huecos, 2 huecos + 2 der
-        bloqueIzq.push(this.crearButaca(fila, 1, esAdaptada, esVip, 'izquierdo'));
-        bloqueIzq.push(this.crearButaca(fila, 2, esAdaptada, esVip, 'izquierdo'));
-        bloqueIzq.push(this.crearHueco(fila, 'izquierdo'));
-        bloqueIzq.push(this.crearHueco(fila, 'izquierdo'));
-
-        for (let i = 5; i <= 9; i++) {
-          bloqueCentro.push(this.crearHueco(fila, 'centro'));
-        }
-        for (let i = 10; i <= 19; i++) {
-          bloqueCentro.push(this.crearButaca(fila, i, esAdaptada, esVip, 'centro'));
-        }
-        for (let i = 20; i <= 24; i++) {
-          bloqueCentro.push(this.crearHueco(fila, 'centro'));
-        }
-
-        bloqueDer.push(this.crearHueco(fila, 'derecho'));
-        bloqueDer.push(this.crearHueco(fila, 'derecho'));
-        bloqueDer.push(this.crearButaca(fila, 27, esAdaptada, esVip, 'derecho'));
-        bloqueDer.push(this.crearButaca(fila, 28, esAdaptada, esVip, 'derecho'));
-      } else {
-        // Filas normales (4, 20 y 4)
-        for (let i = 1; i <= 4; i++) {
-          bloqueIzq.push(this.crearButaca(fila, i, esAdaptada, esVip, 'izquierdo'));
-        }
-        for (let i = 5; i <= 24; i++) {
-          bloqueCentro.push(this.crearButaca(fila, i, esAdaptada, esVip, 'centro'));
-        }
-        for (let i = 25; i <= 28; i++) {
-          bloqueDer.push(this.crearButaca(fila, i, esAdaptada, esVip, 'derecho'));
-        }
+      if (!this.peliculasSrv.estaEnVenta(funcion.peliculas)) {
+        this.bloqueo.set('Las entradas para esta película todavía no están a la venta.');
+        return;
+      }
+      const minima = edadMinima(clasificacionDe(funcion.peliculas));
+      const edad = calcularEdad(this.auth.usuarioActual()?.fecha_nacimiento);
+      if (minima && edad !== null && edad < minima) {
+        this.bloqueo.set(`"${funcion.peliculas.nombre}" es para mayores de ${minima} años. Con tu cuenta no se pueden comprar entradas para esta película.`);
+        return;
       }
 
-      this.filasEstructuradas.push({
-        letra: fila,
-        izquierdo: bloqueIzq,
-        centro: bloqueCentro,
-        derecho: bloqueDer
+      if (this.esMenor()) {
+        this.avisos.mostrar('Como sos menor de edad, para ver la película tenés que ir acompañado/a de un adulto.', 'info', 9000);
+      }
+
+      await this.refrescar();
+      const desuscribir = this.butacasSrv.escuchar(id, () => this.refrescar());
+      const reloj = setInterval(() => {
+        this.ahora.set(Date.now());
+        const v = this.vencimiento();
+        if (v && this.mias().size && v.getTime() <= Date.now()) this.refrescar();
+      }, 1000);
+      this.destroyRef.onDestroy(() => {
+        desuscribir();
+        clearInterval(reloj);
       });
-    }
-  }
-
-  private crearHueco(fila: string, bloque: 'izquierdo' | 'centro' | 'derecho'): Butaca {
-    return {
-      fila,
-      numero: 0,
-      tipo: 'estandar',
-      bloque,
-      ocupada: false,
-      seleccionada: false,
-      precio: 0,
-      esHueco: true
-    };
-  }
-
-  private crearButaca(
-    fila: string, 
-    numero: number, 
-    esAdaptada: boolean, 
-    esVip: boolean, 
-    bloque: 'izquierdo' | 'centro' | 'derecho'
-  ): Butaca {
-    let tipo: 'estandar' | 'adaptada' | 'vip' = 'estandar';
-    let precio = this.precioBase;
-
-    if (esAdaptada) {
-      tipo = 'adaptada';
-    } else if (esVip) {
-      tipo = 'vip';
-      precio = this.precioVip;
-    }
-
-    const estaSeleccionadaPrev = this.butacasSeleccionadas.some(s => s.fila === fila && s.numero === numero);
-
-    return {
-      fila,
-      numero,
-      tipo,
-      bloque,
-      ocupada: false,
-      seleccionada: estaSeleccionadaPrev,
-      precio,
-      esHueco: false
-    };
-  }
-
-  async consultarButacasOcupadas() {
-    try {
-      const ocupadas = await this.peliculasService.obtenerButacasOcupadas(this.funcionId);
-      this.butacasSeleccionadas = [];
-
-      if (ocupadas && ocupadas.length > 0) {
-        this.filasEstructuradas.forEach(f => {
-          [...f.izquierdo, ...f.centro, ...f.derecho].forEach(b => {
-            if (b.esHueco) return;
-
-            const reserva = ocupadas.find((o: any) => o.fila === b.fila && Number(o.numero) === b.numero);
-            if (reserva) {
-              if (reserva.session_id === this.sessionId) {
-                b.seleccionada = true;
-                if (!this.butacasSeleccionadas.some(s => s.fila === b.fila && s.numero === b.numero)) {
-                  this.butacasSeleccionadas.push(b);
-                }
-              } else {
-                b.ocupada = true;
-                b.reservadaPorOtro = true;
-              }
-            }
-          });
-        });
-      }
-      this.cdr.detectChanges();
     } catch (e) {
-      console.warn('Sin reservas previas:', e);
+      this.bloqueo.set(errorLegible(e));
+    } finally {
+      this.cargando.set(false);
     }
   }
 
-  iniciarSuscripcionRealtime() {
-    this.realtimeSub = this.peliculasService
-      .escucharButacasRealtime(this.funcionId)
-      .subscribe((payload) => {
-        const eventType = payload.eventType;
-        const reg = payload.new || payload.old;
-
-        if (!reg || reg.session_id === this.sessionId) return;
-
-        this.filasEstructuradas.forEach(f => {
-          [...f.izquierdo, ...f.centro, ...f.derecho].forEach(b => {
-            if (b.esHueco) return;
-
-            if (b.fila === reg.fila && b.numero === Number(reg.numero)) {
-              if (eventType === 'INSERT') {
-                b.ocupada = true;
-                b.seleccionada = false;
-                b.reservadaPorOtro = true;
-              } else if (eventType === 'DELETE') {
-                b.ocupada = false;
-                b.reservadaPorOtro = false;
-              }
-            }
-          });
-        });
-
-        this.recalcularButacasSeleccionadas();
-        this.cdr.detectChanges();
-      });
+  private refrescando = false;
+  async refrescar() {
+    if (this.refrescando) return;
+    this.refrescando = true;
+    try {
+      const estado = await this.butacasSrv.estado(Number(this.funcionId()));
+      this.mias.set(estado.mias);
+      this.ocupadas.set(estado.ocupadas);
+      this.vencimiento.set(estado.vencimiento);
+    } finally {
+      this.refrescando = false;
+    }
   }
 
-  async toggleSeleccion(b: Butaca) {
-    if (b.ocupada || b.esHueco) return;
-
-    const estabaSeleccionada = b.seleccionada;
-
+  async tocar(a: Asiento) {
+    const id = Number(this.funcionId());
+    const mias = new Set(this.mias());
+    this.procesando.set(true);
     try {
-      if (!estabaSeleccionada) {
-        b.seleccionada = true;
-        await this.peliculasService.ocuparButaca(
-          this.funcionId, 
-          b.fila, 
-          b.numero, 
-          this.sessionId,
-          this.usuarioEmail
-        );
+      if (mias.has(a.id)) {
+        mias.delete(a.id);
+        this.mias.set(mias);
+        await this.butacasSrv.liberar(id, a);
       } else {
-        b.seleccionada = false;
-        await this.peliculasService.liberarButaca(
-          this.funcionId, 
-          b.fila, 
-          b.numero, 
-          this.sessionId
-        );
-      }
-    } catch (e) {
-      console.error('Error al seleccionar butaca:', e);
-      b.seleccionada = estabaSeleccionada;
-      alert('Esta butaca fue seleccionada por otro usuario recientemente.');
-    }
-
-    this.recalcularButacasSeleccionadas();
-    this.validarRestriccionEdad();
-    this.cdr.detectChanges();
-  }
-
-  private recalcularButacasSeleccionadas() {
-    this.butacasSeleccionadas = [];
-    for (const f of this.filasEstructuradas) {
-      const todas = [...f.izquierdo, ...f.centro, ...f.derecho];
-      for (const item of todas) {
-        if (item.seleccionada && !item.esHueco) {
-          this.butacasSeleccionadas.push(item);
+        if (mias.size >= MAXIMO_BUTACAS) {
+          this.avisos.mostrar(`Podés elegir hasta ${MAXIMO_BUTACAS} butacas por compra.`);
+          return;
         }
-      }
-    }
-  }
-
-  get totalPagar(): number {
-    return this.butacasSeleccionadas.reduce((sum, b) => sum + b.precio, 0);
-  }
-
-  private validarRestriccionEdad(): boolean {
-    this.mensajeErrorEdad = '';
-    const pelicula = this.funcionSeleccionada?.peliculas;
-    const clasificacion = pelicula?.clasificacion || pelicula?.restriccion_edad;
-
-    if (!clasificacion || clasificacion === 'ATP') return true;
-
-    const usuarioStorage = localStorage.getItem('usuario_logueado');
-    if (!usuarioStorage) return true;
-
-    try {
-      const usuario = JSON.parse(usuarioStorage);
-      if (!usuario.fecha_nacimiento) return true;
-
-      const hoy = new Date();
-      const nac = new Date(usuario.fecha_nacimiento);
-      let edad = hoy.getFullYear() - nac.getFullYear();
-      const m = hoy.getMonth() - nac.getMonth();
-      if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) {
-        edad--;
-      }
-
-      if (clasificacion === '+18' && edad < 18) {
-        this.mensajeErrorEdad = '⛔ Esta película es para mayores de 18 años. Tu edad no cumple el requisito.';
-        return false;
-      }
-      if (clasificacion === '+13' && edad < 13) {
-        this.mensajeErrorEdad = '⛔ Esta película es para mayores de 13 años. Tu edad no cumple el requisito.';
-        return false;
+        mias.add(a.id);
+        this.mias.set(mias);
+        await this.butacasSrv.reservar(id, a, this.auth.usuarioActual()?.email);
       }
     } catch (e) {
-      console.error('Error edad:', e);
+      this.avisos.error(errorLegible(e));
+    } finally {
+      this.procesando.set(false);
+      await this.refrescar();
     }
-
-    return true;
   }
 
-  async confirmarReserva() {
-    if (this.butacasSeleccionadas.length === 0 || !this.validarRestriccionEdad()) return;
+  async soltarTodas() {
+    await this.butacasSrv.liberarTodas(Number(this.funcionId()));
+    await this.refrescar();
+  }
 
-    localStorage.setItem('butacas_seleccionadas', JSON.stringify(this.butacasSeleccionadas));
-    localStorage.setItem('total_entradas', this.totalPagar.toString());
-
-    this.router.navigate(['/candy']);
+  async continuar() {
+    if (!this.elegidas().length) return;
+    this.procesando.set(true);
+    try {
+      await this.butacasSrv.renovar(Number(this.funcionId()));
+      this.compras.definirButacas(this.elegidas());
+      this.router.navigate(['/candy']);
+    } finally {
+      this.procesando.set(false);
+    }
   }
 }

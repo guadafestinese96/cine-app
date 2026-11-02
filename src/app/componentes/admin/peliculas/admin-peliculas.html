@@ -1,0 +1,95 @@
+<div class="admin-dos">
+  <form class="panel" [formGroup]="form" (ngSubmit)="guardar()" novalidate>
+    <h2 class="admin-titulo">{{ editando() ? 'Editar "' + editando()!.nombre + '"' : 'Nueva película' }}</h2>
+
+    <div class="campo">
+      <label for="p-nombre">Título</label>
+      <input id="p-nombre" class="entrada" formControlName="nombre" />
+    </div>
+    <div class="campo">
+      <label for="p-sinopsis">Sinopsis</label>
+      <textarea id="p-sinopsis" class="entrada" rows="4" formControlName="sinopsis"></textarea>
+    </div>
+    <div class="fila-campos">
+      <div class="campo">
+        <label for="p-duracion">Duración (minutos)</label>
+        <input id="p-duracion" class="entrada" type="number" inputmode="numeric" formControlName="duracion_minutos" />
+      </div>
+      <div class="campo">
+        <span class="etiqueta">Clasificación</span>
+        <div class="fichas">
+          @for (c of clasificaciones; track c) {
+            <button type="button" class="ficha" [class.activa]="form.controls.clasificacion.value === c"
+              (click)="form.controls.clasificacion.setValue(c)">{{ c }}</button>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="campo">
+      <span class="etiqueta">Géneros (podés elegir varios)</span>
+      <div class="fichas">
+        @for (g of generos; track g) {
+          <button type="button" class="ficha" [attr.aria-pressed]="generosElegidos().includes(g)" (click)="alternarGenero(g)">{{ g }}</button>
+        }
+      </div>
+    </div>
+
+    <div class="campo">
+      <label for="p-imagen">URL del póster</label>
+      <input id="p-imagen" class="entrada" formControlName="imagen_url" placeholder="https://…" />
+      @if (form.controls.imagen_url.value) {
+        <img [src]="form.controls.imagen_url.value" alt="Vista previa del póster" style="width: 90px; aspect-ratio: 2/3; object-fit: cover; border-radius: 4px; margin-top: 6px" />
+      }
+    </div>
+
+    <div class="campo">
+      <span class="etiqueta">Fecha de estreno (vacía = ya está en cartelera)</span>
+      <app-campo-fecha formControlName="fecha_estreno" etiqueta="Fecha de estreno" [atajos]="atajosEstreno" />
+      @if (form.controls.fecha_estreno.value) {
+        <button type="button" class="boton fantasma chico" style="align-self: flex-start" (click)="form.controls.fecha_estreno.setValue('')">Quitar fecha</button>
+      }
+    </div>
+
+    <label class="casilla campo">
+      <input type="checkbox" formControlName="preventa_activa" />
+      Abrir preventa 7 días antes del estreno
+    </label>
+    @if (form.controls.preventa_activa.value) {
+      <div class="campo">
+        <label for="p-preventa">Precio de preventa por entrada ($)</label>
+        <input id="p-preventa" class="entrada" type="number" inputmode="numeric" formControlName="precio_preventa" />
+        <span class="ayuda">Desde el día del estreno vuelve el precio normal de cada función.</span>
+      </div>
+    }
+
+    <div class="acciones-form">
+      <button class="boton" type="submit" [disabled]="guardando()">{{ editando() ? 'Guardar cambios' : 'Crear película' }}</button>
+      @if (editando()) {
+        <button type="button" class="boton fantasma" (click)="nueva()">Cancelar edición</button>
+      }
+    </div>
+  </form>
+
+  <section>
+    <div class="campo">
+      <input class="entrada" type="search" placeholder="Buscar película" aria-label="Buscar película"
+        [value]="busqueda()" (input)="busqueda.set($any($event.target).value)" />
+    </div>
+    @for (p of filtradas(); track p.id) {
+      <div class="admin-fila" [class.apagada]="p.activa === false">
+        <img [src]="p.imagen_url" [respaldo]="p.nombre" alt="" />
+        <div class="crece">
+          <strong>{{ p.nombre }}</strong>
+          <span>{{ textoEstado(p) }} · {{ p.duracion_minutos }} min · {{ p.clasificacion }}{{ p.preventa_activa ? ' · preventa $' + p.precio_preventa : '' }}</span>
+        </div>
+        <button type="button" class="interruptor" [attr.aria-pressed]="p.activa !== false" (click)="alternarVisibilidad(p)">
+          {{ p.activa !== false ? 'Visible' : 'Oculta' }}
+        </button>
+        <button type="button" class="boton fantasma chico" (click)="editar(p)">Editar</button>
+      </div>
+    } @empty {
+      <p class="vacio">No hay películas cargadas.</p>
+    }
+  </section>
+</div>

@@ -1,0 +1,12 @@
+.saltar {
+  position: absolute;
+  left: -999px;
+  top: 8px;
+  z-index: 100;
+  padding: 8px 14px;
+  background: var(--bronce);
+  color: var(--tinta);
+  border-radius: 999px;
+  font-weight: 700;
+}
+.saltar:focus { left: 12px; }

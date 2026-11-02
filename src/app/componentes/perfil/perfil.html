@@ -1,168 +1,150 @@
-<div style="max-width: 900px; margin: 30px auto; padding: 20px;">
-  
-  <!-- DATOS DEL USUARIO, CRÉDITO Y PUNTOS DE FIDELIZACIÓN (RF-19 y RF-24) -->
-  @if (usuario) {
-    <div style="background: #1a1a1a; color: white; padding: 20px; border-radius: 10px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+<div class="contenedor pagina">
+  @if (auth.usuarioActual(); as u) {
+    <header class="cabecera">
       <div>
-        <h2 style="margin: 0 0 5px 0; color: #f3c769;">👤 Mi Perfil</h2>
-        <p style="margin: 0; color: #ccc;">{{ usuario.nombre }} {{ usuario.apellido }} ({{ usuario.email }})</p>
+        <h1>{{ u.nombre }} {{ u.apellido }}</h1>
+        <p class="texto-suave">{{ u.email }}</p>
       </div>
-
-      <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-        <!-- CRÉDITO EN CUENTA -->
-        <div style="background: #28a745; padding: 10px 18px; border-radius: 8px; text-align: center;">
-          <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: bold; display: block;">CRÉDITO DISPONIBLE</span>
-          <h3 style="margin: 0; font-size: 1.4rem;">${{ usuario.credito_cuenta || 0 }}</h3>
-        </div>
-
-        <!-- PROGRAMA DE PUNTOS (RF-24) -->
-        <div style="background: #17a2b8; padding: 10px 18px; border-radius: 8px; text-align: center;">
-          <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: bold; display: block;">PUNTOS FIDELIDAD</span>
-          <h3 style="margin: 0; font-size: 1.4rem;">⭐ {{ usuario.puntos || 0 }} pts</h3>
-        </div>
-      </div>
-    </div>
-  }
-
-  @if (mensajeCancelacion) {
-    <div style="padding: 12px; border-radius: 6px; margin-bottom: 20px; font-weight: bold;"
-         [style.background]="mensajeCancelacion.includes('❌') ? '#f8d7da' : '#d4edda'"
-         [style.color]="mensajeCancelacion.includes('❌') ? '#721c24' : '#155724'">
-      {{ mensajeCancelacion }}
-    </div>
-  }
-
-  @if (mensajeCanje) {
-    <div style="padding: 12px; border-radius: 6px; margin-bottom: 20px; font-weight: bold;"
-         [style.background]="mensajeCanje.includes('❌') ? '#f8d7da' : '#d4edda'"
-         [style.color]="mensajeCanje.includes('❌') ? '#721c24' : '#155724'">
-      {{ mensajeCanje }}
-    </div>
-  }
-
-  <!-- RF-24: CATÁLOGO DE CANJE DE PUNTOS -->
-  <section style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 10px; padding: 20px; margin-bottom: 35px;">
-    <h3 style="margin-top: 0; color: #17a2b8; display: flex; align-items: center; gap: 8px;">
-      ⭐ Canje de Puntos ($1 gastado = 1 punto)
-    </h3>
-    <p style="font-size: 0.9rem; color: #555; margin-bottom: 15px;">
-      Tus puntos no son transferibles y se acumulan automáticamente con cada entrada o combo comprado.
-    </p>
-
-    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-      @for (p of premiosPuntos; track p.id) {
-        <div style="flex: 1; min-width: 200px; background: white; border: 1px solid #ddd; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between;">
-          <div>
-            <h4 style="margin: 0 0 6px 0; font-size: 1rem;">{{ p.nombre }}</h4>
-            <span style="color: #e0a800; font-weight: bold; font-size: 0.95rem;">{{ p.puntos }} pts</span>
-          </div>
-
-          <button 
-            type="button" 
-            (click)="canjear(p)"
-            [disabled]="(usuario?.puntos || 0) < p.puntos"
-            style="margin-top: 10px; padding: 6px 12px; background: #17a2b8; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.85rem;"
-            [style.opacity]="(usuario?.puntos || 0) < p.puntos ? '0.5' : '1'"
-          >
-            Canjear
-          </button>
-        </div>
-      }
-    </div>
-
-    <!-- HISTORIAL DE CANJES DE PUNTOS -->
-    @if (historialCanjes.length > 0) {
-      <div style="margin-top: 20px; border-top: 1px solid #ddd; padding-top: 15px;">
-        <h4 style="margin: 0 0 10px 0; font-size: 0.95rem; color: #333;">📜 Historial de Canjes Realizados:</h4>
-        <div style="max-height: 150px; overflow-y: auto;">
-          @for (c of historialCanjes; track c.id) {
-            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; border-bottom: 1px solid #eee; padding: 6px 0;">
-              <span><strong>{{ c.concepto }}</strong> (Código: {{ c.id }})</span>
-              <span style="color: #dc3545; font-weight: bold;">-{{ c.puntosUtilizados }} pts | {{ c.fecha | date:'dd/MM/yyyy HH:mm' }}</span>
-            </div>
-          }
-        </div>
-      </div>
-    }
-  </section>
-
-  <!-- RF-18: HISTORIAL "MIS PELÍCULAS" CON POSTERS, ESTRELLAS Y RESEÑA -->
-  <h3>🎬 Mis Películas & Entradas</h3>
-
-  <div style="display: flex; flex-direction: column; gap: 15px; margin-top: 15px;">
-    @for (item of historialCompras; track item.id) {
-      <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; background: white; display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap;"
-           [style.opacity]="item.cancelada ? '0.5' : '1'">
-        
-        <img [src]="item.imagen_url || 'https://via.placeholder.com/100x140?text=Pel%C3%ADcula'" 
-             [alt]="item.pelicula" 
-             style="width: 90px; height: 130px; object-fit: cover; border-radius: 6px;" />
-
-        <div style="flex: 1; min-width: 240px;">
-          <h4 style="margin: 0 0 6px 0; font-size: 1.2rem;">{{ item.pelicula }}</h4>
-          <p style="margin: 4px 0; color: #555; font-size: 0.9rem;">📍 {{ item.sala }}</p>
-          <p style="margin: 4px 0; color: #555; font-size: 0.9rem;">📅 {{ item.fecha_hora | date:'dd/MM/yyyy HH:mm' }}hs</p>
-          <p style="margin: 4px 0; font-size: 0.9rem;">
-            🎟 <strong>Asientos:</strong> {{ item.butacas ? item.butacas.join(', ') : 'Sin especificar' }}
-          </p>
-
-          <!-- RATING Y COMENTARIO -->
-          @if (!item.cancelada) {
-            <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px;">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 0.85rem; font-weight: bold;">Tu calificación:</span>
-                <div style="color: #ffc107; font-size: 1.3rem; cursor: pointer;">
-                  @for (star of [1, 2, 3, 4, 5]; track star) {
-                    <span (click)="calificar(item, star)">
-                      {{ (item.calificacion || 0) >= star ? '★' : '☆' }}
-                    </span>
-                  }
-                </div>
-              </div>
-
-              <!-- Campo de texto para redactar reseña -->
-              <div style="display: flex; gap: 8px; margin-top: 4px;">
-                <input 
-                  type="text" 
-                  [(ngModel)]="item.comentario" 
-                  placeholder="Escribí tu reseña u opinión sobre la película..." 
-                  style="flex: 1; padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.85rem;"
-                />
-                <button 
-                  (click)="guardarComentario(item)"
-                  style="padding: 6px 12px; background: #007bff; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.85rem;"
-                >
-                  Guardar
-                </button>
-              </div>
-            </div>
-          } @else {
-            <span style="background: #dc3545; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; display: inline-block; margin-top: 8px;">
-              CANCELADA
-            </span>
-          }
-        </div>
-
-        <!-- BOTÓN DE CANCELACIÓN DE RESERVA (RF-19) -->
+      <dl class="saldos">
         <div>
-          @if (!item.cancelada) {
-            @if (puedeCancelar(item.fecha_hora)) {
-              <button (click)="cancelarCompra(item)" 
-                      style="padding: 8px 14px; background: #dc3545; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                ❌ Cancelar Reserva
-              </button>
-            } @else {
-              <small style="color: #777; font-style: italic; display: block; max-width: 140px; text-align: center;">
-                Cierre de cancelación (Menos de 2hs de la función)
-              </small>
-            }
-          }
+          <dt>Puntos</dt>
+          <dd class="numero">{{ u.puntos }}</dd>
         </div>
+        <div>
+          <dt>Crédito en cuenta</dt>
+          <dd class="numero">${{ u.credito }}</dd>
+        </div>
+      </dl>
+    </header>
+  }
 
-      </div>
-    } @empty {
-      <p style="color: #777; font-style: italic;">Aún no posees entradas registradas.</p>
-    }
+  <div class="pestanas" role="tablist">
+    <button role="tab" [attr.aria-selected]="activa() === 'entradas'" (click)="irA('entradas')">Mis entradas</button>
+    <button role="tab" [attr.aria-selected]="activa() === 'peliculas'" (click)="irA('peliculas')">Mis películas</button>
+    <button role="tab" [attr.aria-selected]="activa() === 'puntos'" (click)="irA('puntos')">Puntos y canjes</button>
   </div>
 
+  @if (cargando()) {
+    <p class="texto-suave">Cargando…</p>
+  } @else {
+    @switch (activa()) {
+      @case ('entradas') {
+        <section aria-label="Próximas funciones">
+          <h2 class="subtitulo">Próximas</h2>
+          @for (c of proximas(); track c.codigo) {
+            <article class="fila-entrada">
+              <img class="miniatura" [src]="c.funciones?.peliculas?.imagen_url" [respaldo]="c.funciones?.peliculas?.nombre ?? ''" alt="" />
+              <div class="fila-datos">
+                <h3>{{ c.funciones?.peliculas?.nombre }}</h3>
+                <p>{{ funcionTexto(c) }} · {{ c.funciones?.salas?.nombre }}</p>
+                <p class="texto-suave">Butacas {{ butacasTexto(c) }}</p>
+              </div>
+              <div class="fila-acciones">
+                <a [routerLink]="['/ticket', c.codigo]" class="boton chico">Ver QR</a>
+                @if (comprasSrv.puedeCancelar(c)) {
+                  @if (confirmando() === c.codigo) {
+                    <div class="confirmar">
+                      <span>Te acreditamos ${{ reintegro(c) }} en tu cuenta. ¿Cancelar?</span>
+                      <button type="button" class="boton peligro chico" (click)="cancelar(c)">Sí, cancelar</button>
+                      <button type="button" class="boton fantasma chico" (click)="confirmando.set(null)">No</button>
+                    </div>
+                  } @else {
+                    <button type="button" class="boton fantasma chico" (click)="confirmando.set(c.codigo)">Cancelar compra</button>
+                  }
+                } @else if (!c.entrada_validada_at) {
+                  <span class="texto-suave nota">Ya no se puede cancelar (faltan menos de 2 horas)</span>
+                }
+              </div>
+            </article>
+          } @empty {
+            <div class="vacio">
+              <p>No tenés funciones por delante.</p>
+              <a routerLink="/catalogo" class="boton chico">Ver cartelera</a>
+            </div>
+          }
+        </section>
+
+        @if (anteriores().length) {
+          <section aria-label="Compras anteriores" class="anteriores">
+            <h2 class="subtitulo">Anteriores y canceladas</h2>
+            <div class="tabla-envoltura">
+              <table class="tabla">
+                <thead>
+                  <tr><th>Película</th><th>Función</th><th>Estado</th><th class="num">Pagado</th><th></th></tr>
+                </thead>
+                <tbody>
+                  @for (c of anteriores(); track c.codigo) {
+                    <tr>
+                      <td>{{ c.funciones?.peliculas?.nombre }}</td>
+                      <td>{{ funcionTexto(c) }}</td>
+                      <td>{{ c.estado === 'cancelada' ? 'Cancelada (crédito $' + reintegro(c) + ')' : 'Vista' }}</td>
+                      <td class="num">${{ c.total_pagado }}</td>
+                      <td><a [routerLink]="['/ticket', c.codigo]">Detalle</a></td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+        }
+      }
+      @case ('peliculas') {
+        @if (peliculasVistas().length) {
+          <div class="galeria">
+            @for (p of peliculasVistas(); track p.peliculaId) {
+              <figure class="vista">
+                <a [routerLink]="['/pelicula', p.peliculaId]"><img class="poster" [src]="p.imagen" [respaldo]="p.nombre" [alt]="'Póster de ' + p.nombre" loading="lazy" /></a>
+                <figcaption>
+                  <strong>{{ p.nombre }}</strong>
+                  <span class="texto-suave">{{ p.fecha | date: "d 'de' MMMM yyyy" }}{{ p.veces > 1 ? ' · ' + p.veces + ' veces' : '' }}</span>
+                  <app-estrellas [valor]="p.estrellas" [editable]="true" [etiqueta]="'Tu calificación de ' + p.nombre" (cambio)="calificar(p, $event)" style="--tam: 1.3rem" />
+                </figcaption>
+              </figure>
+            }
+          </div>
+        } @else {
+          <div class="vacio">Acá vas a ver los pósters de todo lo que viste en CineWidi, con tu calificación.</div>
+        }
+      }
+      @case ('puntos') {
+        <p class="texto-suave bajada">Sumás 1 punto por cada peso que pagás. Los puntos son personales y no se pueden transferir.</p>
+        <div class="recompensas">
+          @for (r of recompensas(); track r.id) {
+            <article class="recompensa">
+              <span class="costo numero">{{ r.puntos }} pts</span>
+              <h3>{{ r.nombre }}</h3>
+              <p class="texto-suave">{{ r.tipo === 'entrada' ? 'Se descuenta en tu próxima compra online' : 'Se retira en el candy bar con el código' }}</p>
+              <button type="button" class="boton chico" [disabled]="(auth.usuarioActual()?.puntos ?? 0) < r.puntos" (click)="canjear(r)">
+                {{ (auth.usuarioActual()?.puntos ?? 0) < r.puntos ? 'Te faltan ' + (r.puntos - (auth.usuarioActual()?.puntos ?? 0)) + ' pts' : 'Canjear' }}
+              </button>
+            </article>
+          } @empty {
+            <div class="vacio">Todavía no hay recompensas disponibles.</div>
+          }
+        </div>
+
+        <h2 class="subtitulo">Historial de canjes</h2>
+        @if (canjes().length) {
+          <div class="tabla-envoltura">
+            <table class="tabla">
+              <thead><tr><th>Fecha</th><th>Recompensa</th><th>Código</th><th class="num">Puntos</th><th>Estado</th></tr></thead>
+              <tbody>
+                @for (c of canjes(); track c.codigo) {
+                  <tr [class.resaltado]="ultimoCanje() === c.codigo">
+                    <td>{{ c.created_at | date: 'd/M/yyyy HH:mm' }}</td>
+                    <td>{{ c.nombre }}</td>
+                    <td class="codigo">{{ c.codigo }}</td>
+                    <td class="num">−{{ c.puntos }}</td>
+                    <td>{{ c.usado ? 'Usado' : 'Disponible' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="texto-suave">Todavía no canjeaste puntos.</p>
+        }
+      }
+    }
+  }
 </div>

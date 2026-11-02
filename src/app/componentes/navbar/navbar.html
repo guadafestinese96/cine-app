@@ -1,144 +1,69 @@
-<link
-  rel="stylesheet"
-  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-/>
-
-<nav
-  style="
-    background-color: #1a1a1a;
-    padding: 10px;
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    justify-content: space-between;
-    box-shadow: 5px 5px 5px var(--color-amarillo-pochoclo);
-  "
->
-  <!-- LOGO E IDENTIFICADOR -->
-  <a
-    routerLink="/catalogo"
-    routerLinkActive="active"
-    style="color: white; text-decoration: none; padding: 5px 10px"
-  >
-    <div class="icon" style="display: flex; justify-content: center; align-items: end">
-      <img src="cine-img.png" style="height: 50px; margin-right: 5px" alt="Logo CINEWIDI" />
-      <h1 style="margin: 0; font-size: 1.2rem; color: #f3c769">CINEWIDI</h1>
-    </div>
-  </a>
-
-  <!-- MENÚ DE NAVEGACIÓN -->
-  <div class="menu">
-    <a
-      routerLink="/catalogo"
-      routerLinkActive="active"
-      style="color: white; text-decoration: none; padding: 5px 10px"
-    >
-      Cartelera
+<header class="barra">
+  <div class="contenedor interior">
+    <a routerLink="/catalogo" class="marca" aria-label="CineWidi, ir a la cartelera">
+      <img src="cine-img.png" alt="" width="40" height="40" />
+      <span>CineWidi</span>
     </a>
 
-    @if (esAdmin) {
-      <a
-        routerLink="/admin"
-        routerLinkActive="active"
-        style="color: #f3c769; text-decoration: none; padding: 5px 10px; font-weight: bold;"
-      >
-        Admin
-      </a>
-    }
+    <nav class="enlaces" aria-label="Principal">
+      <a routerLink="/catalogo" routerLinkActive="activo">Cartelera</a>
+      <a routerLink="/catalogo" fragment="proximamente">Próximamente</a>
+      <a routerLink="/candy" routerLinkActive="activo">Candy bar</a>
+      @if (auth.esEmpleado()) {
+        <a routerLink="/validar" routerLinkActive="activo">Validar QR</a>
+      }
+      @if (auth.esAdmin()) {
+        <a routerLink="/admin" routerLinkActive="activo">Administración</a>
+      }
+    </nav>
 
-    <a
-      routerLink="/candy"
-      routerLinkActive="active"
-      style="color: white; text-decoration: none; padding: 5px 10px"
-    >
-      Candy Bar
-    </a>
-  </div>
-
-  <!-- SECCIÓN DE LOGIN / USUARIO -->
-  <div class="login" style="display: flex; align-items: center">
-    @if (usuarioLogueado) {
-      <div
-        (click)="toggleMenu()"
-        title="Opciones de cuenta"
-        style="
-          color: white;
-          cursor: pointer;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 2px;
-        "
-      >
-        <span
-          style="
-            font-size: 0.78rem;
-            font-weight: bold;
-            color: #f3c769;
-            max-width: 120px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-          "
-        >
-          {{ usuarioLogueado?.nombre || usuarioLogueado?.email }}
-        </span>
-        <i class="fa-solid fa-circle-user" style="color: #f3c769; font-size: 26px"></i>
-      </div>
-    } @else {
-      <a
-        routerLink="/login"
-        routerLinkActive="active"
-        title="Iniciar Sesión"
-        style="
-          color: white;
-          text-decoration: none;
-          padding: 5px 10px;
-          display: flex;
-          align-items: center;
-        "
-      >
-        <i class="fa-solid fa-circle-user" style="color: white; font-size: 30px"></i>
-      </a>
-    }
-  </div>
-</nav>
-
-<!-- OVERLAY Y SIDEBAR DESPLEGABLE -->
-@if (isMenuOpen) {
-  <div class="overlay" (click)="toggleMenu()"></div>
-}
-
-<div class="sidebar" [class.open]="isMenuOpen">
-  <div class="sidebar-header">
-    <h3>Mi Cuenta</h3>
-    <button class="close-btn" (click)="toggleMenu()">&times;</button>
-  </div>
-
-  @if (usuarioLogueado) {
-    <div class="sidebar-content">
-      <div class="user-details">
-        <i class="fa-solid fa-user-circle" style="font-size: 2.5rem; color: #f3c769"></i>
-        <p class="user-name">
-          {{ usuarioLogueado?.nombre || usuarioLogueado?.email }}
-        </p>
-      </div>
-
-      <hr style="border-color: #333; margin: 15px 0" />
-
-      <a routerLink="/perfil" class="sidebar-link" (click)="toggleMenu()">
-        <i class="fa-solid fa-id-card"></i> Mi Perfil
-      </a>
-
-      @if (esAdmin) {
-        <a routerLink="/admin" class="sidebar-link" (click)="toggleMenu()" style="color: #f3c769;">
-          <i class="fa-solid fa-user-gear"></i> Panel de Administración
+    <div class="acciones">
+      @if (compras.cantidadEntradas() > 0) {
+        <a routerLink="/candy" class="compra-curso" title="Retomar tu compra">
+          {{ compras.cantidadEntradas() }} {{ compras.cantidadEntradas() === 1 ? 'butaca' : 'butacas' }} en espera
         </a>
       }
 
-      <button class="logout-btn" (click)="cerrarSesion()">
-        <i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión
-      </button>
+      @if (auth.usuarioActual(); as u) {
+        <button type="button" class="avatar" (click)="menuAbierto.set(!menuAbierto())"
+          [attr.aria-expanded]="menuAbierto()" aria-controls="menu-cuenta" aria-label="Abrir menú de mi cuenta">
+          <span class="puntos numero">{{ u.puntos }} pts</span>
+          <span class="circulo">{{ iniciales() }}</span>
+        </button>
+      } @else if (auth.listo()) {
+        <a routerLink="/login" class="boton chico secundario">Ingresar</a>
+      }
     </div>
-  }
-</div>
+  </div>
+</header>
+
+@if (menuAbierto()) {
+  <div class="velo" (click)="menuAbierto.set(false)"></div>
+  <aside id="menu-cuenta" class="menu" aria-label="Mi cuenta">
+    @if (auth.usuarioActual(); as u) {
+      <div class="menu-cabecera">
+        <span class="circulo grande">{{ iniciales() }}</span>
+        <div>
+          <strong>{{ u.nombre }} {{ u.apellido }}</strong>
+          <span class="texto-suave correo">{{ u.email }}</span>
+        </div>
+      </div>
+      <dl class="saldos">
+        <div><dt>Puntos</dt><dd class="numero">{{ u.puntos }}</dd></div>
+        <div><dt>Crédito</dt><dd class="numero">${{ u.credito }}</dd></div>
+      </dl>
+      <nav class="menu-enlaces">
+        <a routerLink="/perfil">Mis entradas</a>
+        <a routerLink="/perfil" [queryParams]="{ seccion: 'peliculas' }">Mis películas</a>
+        <a routerLink="/perfil" [queryParams]="{ seccion: 'puntos' }">Canjear puntos</a>
+        @if (auth.esEmpleado()) {
+          <a routerLink="/validar">Validar QR</a>
+        }
+        @if (auth.esAdmin()) {
+          <a routerLink="/admin">Administración</a>
+        }
+      </nav>
+      <button type="button" class="boton secundario ancho" (click)="cerrarSesion()">Cerrar sesión</button>
+    }
+  </aside>
+}

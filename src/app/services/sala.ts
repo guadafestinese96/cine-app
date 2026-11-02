@@ -1,47 +1,96 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { SupabaseService } from './supabase';
+import { ActividadService } from './actividad';
+import { Sala, TipoButaca } from '../core/modelos';
 
-export interface Funcion {
-  id?: number;
-  sala_id: number;
-  pelicula_id: number;
-  fecha_inicio: string; // ISO String o Date
-  duracion_minutos: number;
+export interface Asiento {
+  id: string; // "J10"
+  fila: string;
+  numero: number;
+  tipo: TipoButaca;
 }
 
-@Injectable({
-  providedIn: 'root'
-})
+export interface FilaSala {
+  letra: string;
+  /** Tres bloques (izquierda, centro, derecha). null = lugar vacío (pasillo de silla de ruedas). */
+  bloques: (Asiento | null)[][];
+}
+
+export const FILAS = 'ABCDEFGHIJKLMNOPQRST'.split('');
+export const FILAS_ADAPTADAS = ['J', 'K'];
+export const FILAS_VIP = ['R', 'S', 'T'];
+
+/**
+ * Todas las salas comparten la misma forma: 20 filas (A–T) y tres columnas de 4, 20 y 4 butacas.
+ * En J y K quedan 2, 10 y 2 butacas adaptadas para personas con discapacidad.
+ * R, S y T son VIP.
+ */
+@Injectable({ providedIn: 'root' })
 export class SalaService {
-  // Ejemplo de salas disponibles
-  salas = [
-    { id: 1, nombre: 'Sala 1' },
-    { id: 2, nombre: 'Sala 2' },
-    { id: 3, nombre: 'Sala 3' }
-  ];
+  private sb = inject(SupabaseService).client;
+  private actividad = inject(ActividadService);
 
-  funcionesExistentes: Funcion[] = [];
+  readonly plano: FilaSala[] = SalaService.generarPlano();
 
-  obtenerSalaDisponible(fechaInicioDeseada: Date, duracionPeliculaMinutos: number): number | null {
-    //getTime() devuelve milisegundos
-    const finFuncionDeseada = new Date(fechaInicioDeseada.getTime() + (duracionPeliculaMinutos + 30) * 60000);
+  static generarPlano(): FilaSala[] {
+    return FILAS.map((letra) => {
+      const adaptada = FILAS_ADAPTADAS.includes(letra);
+      const tipo: TipoButaca = adaptada ? 'adaptada' : FILAS_VIP.includes(letra) ? 'vip' : 'estandar';
+      const asiento = (n: number): Asiento => ({ id: `${letra}${n}`, fila: letra, numero: n, tipo });
+      const rango = (desde: number, hasta: number, habilitado: (n: number) => boolean) =>
+        Array.from({ length: hasta - desde + 1 }, (_, i) => desde + i).map((n) => (habilitado(n) ? asiento(n) : null));
 
-    for (const sala of this.salas) {
-      const tieneSuperposicion = this.funcionesExistentes.some(funcion => {
-        if (funcion.sala_id !== sala.id) return false;
+      return {
+        letra,
+        bloques: adaptada
+          ? [
+              rango(1, 4, (n) => n <= 2),
+              rango(5, 24, (n) => n >= 10 && n <= 19),
+              rango(25, 28, (n) => n >= 27),
+            ]
+          : [rango(1, 4, () => true), rango(5, 24, () => true), rango(25, 28, () => true)],
+      };
+    });
+  }
 
-        const inicioExistente = new Date(funcion.fecha_inicio);
-        // Inicio + duración + 30 minutos de limpieza obligatorios
-        const finExistente = new Date(inicioExistente.getTime() + (funcion.duracion_minutos + 30) * 60000);
+  get capacidad(): number {
+    return this.plano.reduce((total, f) => total + f.bloques.flat().filter(Boolean).length, 0);
+  }
 
-        // Comprobación de solapamiento de rangos de tiempo
-        return (fechaInicioDeseada < finExistente && finFuncionDeseada > inicioExistente);
-      });
+  async listar(incluirInactivas = true): Promise<Sala[]> {
+    let consulta = this.sb.from('salas').select('*').order('id');
+    if (!incluirInactivas) consulta = consulta.or('activa.eq.true,activa.is.null');
+    const { data, error } = await consulta;
+    if (error) throw error;
+    return (data ?? []).map((s) => ({ ...s, butacas_bloqueadas: s.butacas_bloqueadas ?? [] }));
+  }
 
-      if (!tieneSuperposicion) {
-        return sala.id; // Retorna la primera sala libre disponible
-      }
+  async obtener(id: number): Promise<Sala | null> {
+    const { data } = await this.sb.from('salas').select('*').eq('id', id).maybeSingle();
+    return data ? { ...data, butacas_bloqueadas: data.butacas_bloqueadas ?? [] } : null;
+  }
+
+  async guardar(sala: Partial<Sala>) {
+    if (sala.id) {
+      const { error } = await this.sb
+        .from('salas')
+        .update({ nombre: sala.nombre, activa: sala.activa, butacas_bloqueadas: sala.butacas_bloqueadas })
+        .eq('id', sala.id);
+      if (error) throw error;
+      await this.actividad.registrar('Editó sala', `${sala.nombre}`);
+    } else {
+      const { error } = await this.sb.from('salas').insert([{ nombre: sala.nombre, activa: true, butacas_bloqueadas: [] }]);
+      if (error) throw error;
+      await this.actividad.registrar('Creó sala', `${sala.nombre}`);
     }
+  }
 
-    return null; // Si ninguna sala tiene espacio con los 30 min de margen
+  async guardarBloqueos(sala: Sala, bloqueadas: string[]) {
+    const { error } = await this.sb.from('salas').update({ butacas_bloqueadas: bloqueadas }).eq('id', sala.id);
+    if (error) throw error;
+    await this.actividad.registrar(
+      'Cambió distribución de butacas',
+      `${sala.nombre}: ${bloqueadas.length ? bloqueadas.join(', ') + ' fuera de servicio' : 'todas habilitadas'}`,
+    );
   }
 }

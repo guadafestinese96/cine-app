@@ -1,44 +1,38 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { Router, RouterModule, NavigationEnd } from '@angular/router';
+import { Component, inject, signal } from '@angular/core';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs/operators';
 import { AuthService } from '../../services/auth';
+import { ComprasService } from '../../services/compras';
 
 @Component({
   selector: 'app-navbar',
-  standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [RouterLink, RouterLinkActive],
   templateUrl: './navbar.html',
-  styleUrl: './navbar.css'
+  styleUrl: './navbar.css',
 })
-export class NavbarComponent implements OnInit {
-  isMenuOpen: boolean = false;
+export class NavbarComponent {
+  auth = inject(AuthService);
+  compras = inject(ComprasService);
+  menuAbierto = signal(false);
 
-  constructor(public authService: AuthService, private router: Router) {}
-
-  ngOnInit() {
-    this.router.events
-      .pipe(filter(event => event instanceof NavigationEnd))
-      .subscribe(() => {
-        this.isMenuOpen = false;
-      });
+  constructor() {
+    inject(Router)
+      .events.pipe(
+        filter((e) => e instanceof NavigationEnd),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => this.menuAbierto.set(false));
   }
 
-  // Getter que obtiene el valor de la Signal o null
-  get usuarioLogueado() {
-    return this.authService.usuarioActual();
-  }
-
-  get esAdmin(): boolean {
-    return this.authService.esAdmin();
-  }
-
-  toggleMenu() {
-    this.isMenuOpen = !this.isMenuOpen;
+  iniciales(): string {
+    const u = this.auth.usuarioActual();
+    if (!u) return '';
+    return ((u.nombre?.[0] ?? '') + (u.apellido?.[0] ?? '') || u.email[0]).toUpperCase();
   }
 
   cerrarSesion() {
-    this.isMenuOpen = false;
-    this.authService.cerrarSesion();
+    this.menuAbierto.set(false);
+    this.auth.cerrarSesion();
   }
 }

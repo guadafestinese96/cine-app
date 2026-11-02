@@ -1,0 +1,7 @@
+.acceso { display: flex; justify-content: center; }
+.tarjeta-acceso { width: 100%; max-width: 560px; }
+.tarjeta-acceso h1 { margin-bottom: 8px; }
+.bajada { margin-bottom: 26px; }
+.vacaciones .entrada { max-width: 140px; }
+.mensaje { margin-bottom: 16px; }
+.alternativa { margin-top: 22px; font-size: 0.92rem; text-align: center; }

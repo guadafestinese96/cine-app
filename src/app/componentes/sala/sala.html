@@ -1,95 +1,96 @@
-<div class="sala-container">
-  <div class="pantalla-caja">
-    <div class="pantalla">PANTALLA</div>
-  </div>
+<div class="contenedor pagina">
+  <ol class="pasos" aria-label="Pasos de la compra">
+    <li aria-current="step">Butacas</li>
+    <li>Candy bar</li>
+    <li>Pago</li>
+  </ol>
 
-  <!-- Leyenda de colores -->
-  <div class="leyenda">
-    <div class="item-leyenda"><span class="box libre"></span> Libre</div>
-    <div class="item-leyenda"><span class="box seleccionada"></span> Tu Selección</div>
-    <div class="item-leyenda"><span class="box adaptada"></span> Discapacidad (J, K)</div>
-    <div class="item-leyenda"><span class="box vip"></span> VIP (R, S, T)</div>
-    <div class="item-leyenda"><span class="box ocupada"></span> Ocupada</div>
-  </div>
-
-  <!-- Mapa de Filas y Butacas -->
-  <div class="mapa-sala">
-    <div *ngFor="let fila of filasEstructuradas" class="fila-container">
-      <span class="letra-fila">{{ fila.letra }}</span>
-
-      <!-- Bloque Izquierdo -->
-      <div class="bloque-izquierdo">
-        <div 
-          *ngFor="let b of fila.izquierdo" 
-          class="butaca"
-          [ngClass]="{
-            'adaptada': b.tipo === 'adaptada',
-            'vip': b.tipo === 'vip',
-            'seleccionada': b.seleccionada,
-            'ocupada': b.ocupada
-          }"
-          (click)="toggleSeleccion(b)">
-          {{ b.numero }}
-        </div>
-      </div>
-
-      <!-- Pasillo Izquierdo -->
-      <div class="pasillo"></div>
-
-      <!-- Bloque Centro -->
-      <div class="bloque-centro">
-        <div 
-          *ngFor="let b of fila.centro" 
-          class="butaca"
-          [ngClass]="{
-            'adaptada': b.tipo === 'adaptada',
-            'vip': b.tipo === 'vip',
-            'seleccionada': b.seleccionada,
-            'ocupada': b.ocupada
-          }"
-          (click)="toggleSeleccion(b)">
-          {{ b.numero }}
-        </div>
-      </div>
-
-      <!-- Pasillo Derecho -->
-      <div class="pasillo"></div>
-
-      <!-- Bloque Derecho -->
-      <div class="bloque-derecho">
-        <div 
-          *ngFor="let b of fila.derecho" 
-          class="butaca"
-          [ngClass]="{
-            'adaptada': b.tipo === 'adaptada',
-            'vip': b.tipo === 'vip',
-            'seleccionada': b.seleccionada,
-            'ocupada': b.ocupada
-          }"
-          (click)="toggleSeleccion(b)">
-          {{ b.numero }}
-        </div>
-      </div>
-
-      <span class="letra-fila">{{ fila.letra }}</span>
+  @if (cargando()) {
+    <p class="texto-suave">Preparando la sala…</p>
+  } @else if (bloqueo()) {
+    <div class="vacio">
+      <p>{{ bloqueo() }}</p>
+      <a routerLink="/catalogo" class="boton secundario chico">Volver a la cartelera</a>
     </div>
-  </div>
+  } @else {
+    <header class="encabezado">
+      <div>
+        <h1>{{ pelicula()?.nombre }}</h1>
+        <p class="texto-suave">{{ descripcionFuncion() }}</p>
+      </div>
+      <a [routerLink]="['/pelicula', pelicula()?.id]" class="boton fantasma chico">Cambiar horario</a>
+    </header>
 
-  <!-- Resumen inferior -->
-  <div class="resumen-panel" *ngIf="butacasSeleccionadas.length > 0">
-    <p>Butacas seleccionadas: 
-      <strong *ngFor="let b of butacasSeleccionadas; let last = last">
-        {{ b.fila }}{{ b.numero }} ({{ b.tipo | uppercase }}){{ last ? '' : ', ' }}
-      </strong>
-    </p>
-    <p class="total">Total: <span>${{ totalPagar }}</span></p>
+    @if (esMenor() || restriccion() > 0) {
+      <p class="mensaje info aviso-edad" [attr.role]="esMenor() ? 'alert' : null">
+        @if (esMenor()) {
+          Como sos menor de edad, tenés que ingresar acompañado/a de un adulto.
+        } @else {
+          Película {{ clasificacion() }}: los menores de edad deben ingresar acompañados de un adulto.
+        }
+      </p>
+    }
 
-    <div *ngIf="mensajeErrorEdad" class="error-edad">
-      {{ mensajeErrorEdad }}
+    <div class="disposicion">
+      <div class="panel mapa">
+        <app-mapa-butacas
+          [plano]="salaSrv.plano"
+          [mias]="mias()"
+          [ocupadas]="ocupadas()"
+          [bloqueadas]="bloqueadas()"
+          [ocupado]="procesando()"
+          (tocar)="tocar($event)"
+        />
+        <p class="vivo texto-suave"><span class="punto" aria-hidden="true"></span>Las butacas se actualizan en vivo mientras elegís.</p>
+      </div>
+
+      <aside class="resumen entrada-papel" aria-label="Resumen de butacas">
+        <div class="resumen-arriba">
+          <h2>Tus butacas</h2>
+          @if (elegidas().length) {
+            <ul class="elegidas">
+              @for (b of elegidas(); track b.fila + b.numero) {
+                <li>
+                  <span class="asiento">{{ b.fila }}{{ b.numero }}</span>
+                  <span class="tipo">
+                    @switch (b.tipo) {
+                      @case ('vip') { VIP }
+                      @case ('adaptada') { Accesible }
+                      @default { General }
+                    }
+                  </span>
+                  <span class="numero">${{ b.precio }}</span>
+                </li>
+              }
+            </ul>
+            @if (hayVip()) {
+              <p class="aviso-vip">Elegiste butacas VIP: cuestan ${{ precioVip() }} en lugar de ${{ precioEstandar() }}.</p>
+            }
+            @if (restante()) {
+              <p class="reloj">Te las guardamos <strong class="numero">{{ restante() }}</strong></p>
+            }
+          } @else {
+            <p class="indicacion">Tocá las butacas libres en el plano. Hasta {{ maximo }} por compra.</p>
+            <dl class="precios">
+              <div><dt>General y accesible</dt><dd class="numero">${{ precioEstandar() }}</dd></div>
+              <div><dt>VIP (R, S, T)</dt><dd class="numero">${{ precioVip() }}</dd></div>
+            </dl>
+          }
+        </div>
+        <hr class="troquel" />
+        <div class="resumen-abajo">
+          <div class="total">
+            <span>Total entradas</span>
+            <strong class="numero">${{ total() }}</strong>
+          </div>
+          <button type="button" class="boton ancho oscuro" [disabled]="!elegidas().length || procesando()" (click)="continuar()">
+            Continuar al candy bar
+          </button>
+          @if (elegidas().length) {
+            <button type="button" class="boton fantasma chico ancho soltar" (click)="soltarTodas()">Quitar todas</button>
+          }
+        </div>
+      </aside>
     </div>
-
-    <button class="btn-confirmar" (click)="confirmarReserva()" [disabled]="!!mensajeErrorEdad">
-      Continuar al Candy Bar 🍿
-    </button>
-  </div>
+  }
 </div>

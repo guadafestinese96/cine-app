@@ -1,0 +1,109 @@
+<div class="grilla">
+  <!-- Precios -->
+  <form class="panel" (ngSubmit)="guardarConfig()">
+    <h2 class="admin-titulo">Precios generales</h2>
+    <p class="texto-suave">Cada función puede tener su propio precio; si no, usa el general.</p>
+    <div class="campo">
+      <label for="b-precio">Entrada general ($)</label>
+      <input id="b-precio" class="entrada" type="number" name="precio_entrada" [(ngModel)]="valores.precio_entrada" />
+    </div>
+    <div class="campo">
+      <label for="b-vip">Recargo butacas VIP (%)</label>
+      <input id="b-vip" class="entrada" type="number" name="recargo_vip_pct" [(ngModel)]="valores.recargo_vip_pct" />
+    </div>
+    <div class="campo">
+      <label for="b-reserva">Minutos que se guarda una butaca elegida</label>
+      <input id="b-reserva" class="entrada" type="number" name="minutos_reserva" [(ngModel)]="valores.minutos_reserva" />
+    </div>
+    <button class="boton" type="submit">Guardar precios</button>
+  </form>
+
+  <!-- Cupones -->
+  <section class="panel">
+    <h2 class="admin-titulo">Cupones</h2>
+    <p class="texto-suave">El de bienvenida se aplica solo en la primera compra: cambiá su porcentaje cuando quieras.</p>
+    @for (c of cupones(); track c.id) {
+      <div class="admin-fila" [class.apagada]="!c.activo">
+        <div class="crece">
+          <strong>{{ c.codigo }} · {{ c.porcentaje }}%</strong>
+          <span class="tipo">{{ nombreTipo(c.tipo) }}</span>
+        </div>
+        <button type="button" class="interruptor" [attr.aria-pressed]="c.activo" (click)="alternarCupon(c)">{{ c.activo ? 'Vigente' : 'Pausado' }}</button>
+        <button type="button" class="boton fantasma chico" (click)="editarCupon(c)">Editar</button>
+      </div>
+    }
+    <form class="editor" (ngSubmit)="guardarCupon()">
+      <strong>{{ cupon.id ? 'Editar ' + cupon.codigo : 'Nuevo cupón' }}</strong>
+      <div class="fila-campos" style="margin-top: 10px">
+        <div class="campo">
+          <label for="cu-codigo">Código</label>
+          <input id="cu-codigo" class="entrada" name="codigo" [(ngModel)]="cupon.codigo" style="text-transform: uppercase" />
+        </div>
+        <div class="campo">
+          <label for="cu-pct">Descuento (%)</label>
+          <input id="cu-pct" class="entrada" type="number" name="porcentaje" [(ngModel)]="cupon.porcentaje" />
+        </div>
+      </div>
+      <div class="campo">
+        <span class="etiqueta">Para quién</span>
+        <div class="fichas">
+          @for (t of tiposCupon; track t.valor) {
+            <button type="button" class="ficha" [class.activa]="cupon.tipo === t.valor" (click)="cupon.tipo = t.valor">{{ t.nombre }}</button>
+          }
+        </div>
+      </div>
+      <div class="campo">
+        <label for="cu-desc">Descripción</label>
+        <input id="cu-desc" class="entrada" name="descripcion" [(ngModel)]="cupon.descripcion" />
+      </div>
+      <div class="acciones-form">
+        <button class="boton" type="submit">Guardar cupón</button>
+        @if (cupon.id) {
+          <button type="button" class="boton fantasma" (click)="limpiarCupon()">Cancelar</button>
+        }
+      </div>
+    </form>
+  </section>
+
+  <!-- Recompensas -->
+  <section class="panel">
+    <h2 class="admin-titulo">Recompensas de puntos</h2>
+    <p class="texto-suave">Cada peso pagado suma 1 punto. Definí cuántos puntos cuesta cada premio.</p>
+    @for (r of recompensas(); track r.id) {
+      <div class="admin-fila" [class.apagada]="!r.activa">
+        <div class="crece">
+          <strong>{{ r.nombre }}</strong>
+          <span>{{ r.puntos }} puntos · {{ r.tipo === 'entrada' ? 'Entrada gratis' : 'Producto del candy' }}</span>
+        </div>
+        <button type="button" class="interruptor" [attr.aria-pressed]="r.activa" (click)="alternarRecompensa(r)">{{ r.activa ? 'Activa' : 'Pausada' }}</button>
+        <button type="button" class="boton fantasma chico" (click)="editarRecompensa(r)">Editar</button>
+      </div>
+    }
+    <form class="editor" (ngSubmit)="guardarRecompensa()">
+      <strong>{{ recompensa.id ? 'Editar recompensa' : 'Nueva recompensa' }}</strong>
+      <div class="campo" style="margin-top: 10px">
+        <label for="r-nombre">Nombre</label>
+        <input id="r-nombre" class="entrada" name="nombre" [(ngModel)]="recompensa.nombre" placeholder="Pochoclo grande" />
+      </div>
+      <div class="fila-campos">
+        <div class="campo">
+          <label for="r-puntos">Puntos</label>
+          <input id="r-puntos" class="entrada" type="number" name="puntos" [(ngModel)]="recompensa.puntos" />
+        </div>
+        <div class="campo">
+          <span class="etiqueta">Tipo</span>
+          <div class="fichas">
+            <button type="button" class="ficha" [class.activa]="recompensa.tipo === 'entrada'" (click)="recompensa.tipo = 'entrada'">Entrada</button>
+            <button type="button" class="ficha" [class.activa]="recompensa.tipo === 'producto'" (click)="recompensa.tipo = 'producto'">Producto</button>
+          </div>
+        </div>
+      </div>
+      <div class="acciones-form">
+        <button class="boton" type="submit">Guardar recompensa</button>
+        @if (recompensa.id) {
+          <button type="button" class="boton fantasma" (click)="limpiarRecompensa()">Cancelar</button>
+        }
+      </div>
+    </form>
+  </section>
+</div>

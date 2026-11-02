@@ -1,0 +1,116 @@
+@if (cargando()) {
+  <p class="texto-suave">Calculando reportes…</p>
+} @else {
+  <section class="panel bloque" aria-labelledby="t-facturacion">
+    <div class="cabecera">
+      <h2 id="t-facturacion" class="admin-titulo">Facturación por día</h2>
+      <div class="controles">
+        <div class="fichas" role="group" aria-label="Rango">
+          @for (d of [7, 30, 90]; track d) {
+            <button type="button" class="ficha" [class.activa]="dias() === d" (click)="dias.set(d)">{{ d }} días</button>
+          }
+        </div>
+        <button type="button" class="boton secundario chico" (click)="exportarPdf()">Exportar PDF</button>
+        <button type="button" class="boton secundario chico" (click)="exportarExcel()">Exportar Excel</button>
+      </div>
+    </div>
+
+    <dl class="kpis">
+      <div><dt>Facturado</dt><dd class="numero">${{ totales().facturado.toLocaleString('es-AR') }}</dd></div>
+      <div><dt>Entradas vendidas</dt><dd class="numero">{{ totales().entradas }}</dd></div>
+      <div><dt>Compras</dt><dd class="numero">{{ totales().compras }}</dd></div>
+      <div><dt>Canceladas</dt><dd class="numero">{{ totales().canceladas }}</dd></div>
+    </dl>
+
+    <div class="pestanas mini" role="tablist">
+      <button role="tab" [attr.aria-selected]="vista() === 'grafico'" (click)="vista.set('grafico')">Gráfico</button>
+      <button role="tab" [attr.aria-selected]="vista() === 'tabla'" (click)="vista.set('tabla')">Tabla</button>
+    </div>
+
+    @if (vista() === 'grafico') {
+      <div class="columnas" [class.densas]="dias() > 30" role="img" [attr.aria-label]="'Facturación diaria de los últimos ' + dias() + ' días. Ver la pestaña Tabla para los valores.'">
+        @for (d of serie(); track d.clave; let i = $index) {
+          <div class="columna">
+            <span class="dato">
+              <strong>{{ d.fecha | date: 'EEE d/M' }}</strong>
+              <span class="numero">${{ d.facturado.toLocaleString('es-AR') }}</span>
+              <span class="numero">{{ d.entradas }} entradas</span>
+            </span>
+            <span class="barra" [style.height.%]="(d.facturado / maximo()) * 100"></span>
+            @if (dias() <= 30 || i % 7 === 0) {
+              <span class="eje numero">{{ d.fecha | date: 'd/M' }}</span>
+            }
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="tabla-envoltura">
+        <table class="tabla">
+          <thead>
+            <tr><th>Día</th><th class="num">Facturado</th><th class="num">Entradas</th><th class="num">Compras</th><th class="num">Canceladas</th></tr>
+          </thead>
+          <tbody>
+            @for (f of filas(); track f.dia) {
+              <tr>
+                <td>{{ fechaFila(f.dia) | date: 'EEE d/M/yyyy' }}</td>
+                <td class="num">${{ f.facturado.toLocaleString('es-AR') }}</td>
+                <td class="num">{{ f.entradas }}</td>
+                <td class="num">{{ f.compras }}</td>
+                <td class="num">{{ f.canceladas }}</td>
+              </tr>
+            } @empty {
+              <tr><td colspan="5" class="texto-suave">Sin ventas en el rango elegido.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+
+  <div class="cabecera periodo">
+    <div class="fichas" role="group" aria-label="Período">
+      <button type="button" class="ficha" [class.activa]="periodo() === 'semana'" (click)="elegirPeriodo('semana')">Por semana</button>
+      <button type="button" class="ficha" [class.activa]="periodo() === 'mes'" (click)="elegirPeriodo('mes')">Por mes</button>
+    </div>
+    <div class="navegar">
+      <button type="button" class="boton fantasma chico" (click)="moverPeriodo(-1)" aria-label="Período anterior">‹</button>
+      <strong class="nombre-periodo">{{ nombrePeriodo() }}</strong>
+      <button type="button" class="boton fantasma chico" (click)="moverPeriodo(1)" [disabled]="esPeriodoActual()" aria-label="Período siguiente">›</button>
+    </div>
+  </div>
+
+  <div class="rankings">
+    <section class="panel" aria-labelledby="t-peliculas">
+      <h2 id="t-peliculas" class="admin-titulo">Películas más vistas</h2>
+      <ol class="ranking">
+        @for (p of peliculas(); track p.nombre; let i = $index) {
+          <li [title]="p.nombre + ': ' + p.cantidad + ' entradas'">
+            <span class="nombre"><span class="pos">{{ i + 1 }}</span>{{ p.nombre }}</span>
+            <span class="pista"><span class="relleno" [style.width.%]="(p.cantidad / maxPeliculas()) * 100"></span></span>
+            <span class="valor numero">{{ p.cantidad }}</span>
+          </li>
+        } @empty {
+          <li class="texto-suave">Sin funciones con entradas vendidas en este período.</li>
+        }
+      </ol>
+    </section>
+
+    <section class="panel" aria-labelledby="t-candy">
+      <h2 id="t-candy" class="admin-titulo">Candy bar más vendido</h2>
+      @if (productos()[0]; as top) {
+        <p class="destacado"><strong>{{ top.nombre }}</strong> es el producto más vendido ({{ top.cantidad }} unidades).</p>
+      }
+      <ol class="ranking">
+        @for (p of productos(); track p.nombre; let i = $index) {
+          <li [title]="p.nombre + ': ' + p.cantidad + ' unidades'">
+            <span class="nombre"><span class="pos">{{ i + 1 }}</span>{{ p.nombre }}</span>
+            <span class="pista"><span class="relleno" [style.width.%]="(p.cantidad / maxProductos()) * 100"></span></span>
+            <span class="valor numero">{{ p.cantidad }}</span>
+          </li>
+        } @empty {
+          <li class="texto-suave">Sin ventas de candy en este período.</li>
+        }
+      </ol>
+    </section>
+  </div>
+}

@@ -1,133 +1,138 @@
-<div style="max-width: 900px; margin: 20px auto; padding: 20px">
-  <div class="titulo-candy">
-    <img src="cine-img.png" alt="pochoclos-candy" class="pochoclos-candy-img" />
-    <h2>Candy</h2>
-  </div>
-  <p>Elegí tus snacks para acompañar la película antes de confirmar tu entrada:</p>
+<div class="contenedor pagina">
+  @let comprando = compras.cantidadEntradas() > 0;
+  @if (comprando) {
+    <ol class="pasos" aria-label="Pasos de la compra">
+      <li>Butacas</li>
+      <li aria-current="step">Candy bar</li>
+      <li>Pago</li>
+    </ol>
+  }
 
-  <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 20px">
-    @for (p of productos; track p.id) {
-      <div
-        style="
-          border: 1px solid #ccc;
-          width: 250px;
-          padding: 15px;
-          border-radius: 8px;
-          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-        "
-      >
-        <div>
-          <img
-            [src]="p.imagen_url || 'https://via.placeholder.com/300x200?text=Candy+Bar'"
-            [alt]="p.nombre"
-            style="width: 100%; height: 160px; object-fit: cover; border-radius: 6px"
-          />
-          <h3 style="margin: 10px 0 5px 0; font-size: 1.1rem">{{ p.nombre }}</h3>
-          <p style="font-size: 0.85rem; color: #666">{{ p.descripcion }}</p>
-          <p style="font-size: 1.2rem; font-weight: bold; color: #28a745; margin: 10px 0">
-            ${{ p.precio }}
-          </p>
-        </div>
-
-        <div
-          style="
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-top: 10px;
-          "
-        >
-          <button
-            (click)="quitarDelCarrito(p)"
-            [disabled]="getCantidad(p) === 0"
-            style="
-              padding: 5px 12px;
-              background: #dc3545;
-              color: white;
-              border: none;
-              border-radius: 4px;
-              cursor: pointer;
-              font-weight: bold;
-            "
-          >
-            -
-          </button>
-
-          <span style="font-size: 1.1rem; font-weight: bold">{{ getCantidad(p) }}</span>
-
-          <button
-            (click)="agregarAlCarrito(p)"
-            style="
-              padding: 5px 12px;
-              background: #28a745;
-              color: white;
-              border: none;
-              border-radius: 4px;
-              cursor: pointer;
-              font-weight: bold;
-            "
-          >
-            +
-          </button>
-        </div>
+  @if (cargando()) {
+    <p class="texto-suave">Abriendo el candy bar…</p>
+  } @else {
+    <header class="encabezado" [class.menu]="!comprando">
+      <div>
+        <h1>Candy bar</h1>
+        @if (comprando) {
+          <p class="texto-suave">{{ descripcion() }}</p>
+        } @else {
+          <p class="texto-suave">Pochoclos, bebidas y combos. Se compran junto con tu entrada y se retiran con el mismo QR, sin hacer fila.</p>
+        }
       </div>
-    } @empty {
-      <p>Cargando productos o no hay disponibles en este momento...</p>
-    }
-  </div>
-
-  
-  
-
-  <!-- RESUMEN DEL CANDY -->
-  <div
-    style="
-      margin-top: 20px;
-      padding: 20px;
-      border: 1px solid #28a745;
-      border-radius: 8px;
-      background: #f4fff4;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    "
-  >
-    <div>
-      <h3 style="margin: 0">
-        Subtotal: <strong>${{ subtotalCandy }}</strong>
-      </h3>
-
-      @if (porcentajeDescuento > 0) {
-        <p style="margin: 5px 0 0 0; color: #28a745; font-weight: bold">
-          Descuento ({{ porcentajeDescuento }}%): -${{ montoDescuento }}
-        </p>
-        <h3 style="margin: 5px 0 0 0; color: #28a745">
-          Total con Descuento: <strong>${{ totalCandy }}</strong>
-        </h3>
+      @if (!comprando) {
+        <a routerLink="/catalogo" class="boton">Elegir película</a>
       }
+    </header>
 
-      <p style="margin: 5px 0 0 0; font-size: 0.9rem; color: #555">
-        Items seleccionados: {{ carritoCandy.length }}
-      </p>
+    <div class="disposicion" [class.sin-resumen]="!comprando">
+      <div>
+        @if (combos().length) {
+          <section aria-labelledby="titulo-combos" class="bloque-combos">
+            <h2 class="titulo-seccion" id="titulo-combos">Combos con entrada</h2>
+            <p class="texto-suave bajada">
+              Precio fijo que reemplaza el valor de una entrada general.
+              @if (comprando) {
+                Podés sumar hasta uno por butaca ({{ combosDisponibles() }} {{ combosDisponibles() === 1 ? 'disponible' : 'disponibles' }}).
+              }
+            </p>
+            <div class="combos">
+              @for (c of combos(); track c.id) {
+                <article class="combo">
+                  @if (c.imagen_url) {
+                    <img [src]="c.imagen_url" [respaldo]="c.nombre" [alt]="c.nombre" loading="lazy" />
+                  }
+                  <div class="combo-texto">
+                    <h3>{{ c.nombre }}</h3>
+                    <p class="incluye">{{ c.incluye }}</p>
+                    @if (c.descripcion) {
+                      <p class="texto-suave">{{ c.descripcion }}</p>
+                    }
+                    <div class="combo-pie">
+                      <strong class="precio numero">${{ c.precio }}</strong>
+                      @if (comprando) {
+                      <div class="contador">
+                        <button type="button" (click)="sumarCombo(c, -1)" [disabled]="!compras.cantidadDe('combos', c.id)" [attr.aria-label]="'Quitar ' + c.nombre">−</button>
+                        <span class="numero" aria-live="polite">{{ compras.cantidadDe('combos', c.id) }}</span>
+                        <button type="button" (click)="sumarCombo(c, 1)" [attr.aria-label]="'Agregar ' + c.nombre">+</button>
+                      </div>
+                      }
+                    </div>
+                  </div>
+                </article>
+              }
+            </div>
+          </section>
+        }
+
+        <section aria-labelledby="titulo-productos">
+          <h2 class="titulo-seccion" id="titulo-productos">Para acompañar</h2>
+          @if (categorias().length > 2) {
+            <div class="fichas categorias" role="group" aria-label="Categoría">
+              @for (cat of categorias(); track cat) {
+                <button type="button" class="ficha" [attr.aria-pressed]="categoria() === cat" (click)="categoria.set(cat)">{{ cat }}</button>
+              }
+            </div>
+          }
+          <div class="productos">
+            @for (p of productosVisibles(); track p.id) {
+              <article class="producto">
+                @if (p.imagen_url) {
+                  <img [src]="p.imagen_url" [respaldo]="p.nombre" [alt]="p.nombre" loading="lazy" />
+                } @else {
+                  <div class="sin-imagen" aria-hidden="true">🍿</div>
+                }
+                <h3>{{ p.nombre }}</h3>
+                @if (p.descripcion) {
+                  <p class="texto-suave descripcion">{{ p.descripcion }}</p>
+                }
+                <div class="producto-pie">
+                  <span class="numero precio-chico">${{ p.precio }}</span>
+                  @if (comprando) {
+                  <div class="contador">
+                    <button type="button" (click)="sumarProducto(p, -1)" [disabled]="!compras.cantidadDe('productos', p.id)" [attr.aria-label]="'Quitar ' + p.nombre">−</button>
+                    <span class="numero" aria-live="polite">{{ compras.cantidadDe('productos', p.id) }}</span>
+                    <button type="button" (click)="sumarProducto(p, 1)" [attr.aria-label]="'Agregar ' + p.nombre">+</button>
+                  </div>
+                  }
+                </div>
+              </article>
+            } @empty {
+              <p class="vacio">El candy bar no tiene productos cargados por ahora.</p>
+            }
+          </div>
+        </section>
+      </div>
+
+      @if (comprando) {
+      <aside class="resumen entrada-papel" aria-label="Resumen de la compra">
+        <div class="resumen-arriba">
+          <h2>Tu pedido</h2>
+          <dl class="lineas">
+            <div>
+              <dt>{{ compras.cantidadEntradas() }} {{ compras.cantidadEntradas() === 1 ? 'entrada' : 'entradas' }}
+                ({{ butacasTexto() }})</dt>
+              <dd class="numero">${{ totales().entradas }}</dd>
+            </div>
+            @for (c of compras.enCurso().combos; track c.id) {
+              <div><dt>{{ c.cantidad }} × {{ c.nombre }}</dt><dd class="numero">${{ c.precio * c.cantidad }}</dd></div>
+            }
+            @for (p of compras.enCurso().productos; track p.id) {
+              <div><dt>{{ p.cantidad }} × {{ p.nombre }}</dt><dd class="numero">${{ p.precio * p.cantidad }}</dd></div>
+            }
+          </dl>
+          <p class="nota">Todo se retira con un único QR.</p>
+        </div>
+        <hr class="troquel" />
+        <div class="resumen-abajo">
+          <div class="total"><span>Subtotal</span><strong class="numero">${{ totales().subtotal }}</strong></div>
+          <button type="button" class="boton oscuro ancho" (click)="continuar()">
+            {{ compras.enCurso().productos.length || compras.enCurso().combos.length ? 'Continuar al pago' : 'Seguir sin candy' }}
+          </button>
+          <a [routerLink]="['/sala', compras.enCurso().funcionId]" class="volver">Cambiar butacas</a>
+        </div>
+      </aside>
+      }
     </div>
-
-    <button
-      (click)="continuarAlPago()"
-      style="
-        padding: 12px 24px;
-        background: #007bff;
-        color: white;
-        border: none;
-        border-radius: 6px;
-        font-weight: bold;
-        font-size: 1rem;
-        cursor: pointer;
-      "
-    >
-      Continuar al Resumen Final →
-    </button>
-  </div>
+  }
 </div>

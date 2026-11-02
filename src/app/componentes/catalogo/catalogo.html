@@ -1,294 +1,131 @@
-<div class="main-container">
-
-  <!-- SECCIÓN DE PREVENTA EXCLUSIVA -->
-  @if (peliculasPreventa && peliculasPreventa.length > 0) {
-    <section class="section-preventa">
-
-      <div class="cards-grid">
-        @for (p of peliculasPreventa; track p.id) {
-          <div class="card-preventa">
-            <span class="badge badge-preventa">PREVENTA</span>
-
-            <div class="card-body">
-              <img
-                [src]="p.imagen_url || 'https://via.placeholder.com/200x300?text=Preventa'"
-                [alt]="p.nombre || p.titulo"
-                class="card-img"
-              />
-
-              <h3 class="card-title">{{ p.nombre || p.titulo }}</h3>
-              
-              <p class="card-info" *ngIf="p.fecha_estreno">
-                <strong>Estreno:</strong> {{ p.fecha_estreno | date: 'dd/MM/yyyy' }}
-              </p>
-            </div>
-
-            <!-- BOTÓN DE COMPRA DE PREVENTA -->
-            <div class="card-footer-acciones">
-              <button 
-                class="btn-comprar"
-                [disabled]="getFuncionesDePelicula(p.id).length === 0"
-                (click)="comprarEntradas(p.id)"
-              >
-                {{ getFuncionesDePelicula(p.id).length > 0 ? '🎟️ Comprar entradas' : 'Sin funciones' }}
-              </button>
-            </div>
-
-          </div>
-        }
-      </div>
-    </section>
-  }
-  
-  <!-- SECCIÓN DESTACADA: TOP 3 PELÍCULAS MÁS VENDIDAS -->
-  @if (topPeliculas && topPeliculas.length > 0) {
-    <section class="section-top">
-      <h2 class="title-top">Top 3 Películas Más Vendidas</h2>
-
-      <div class="cards-grid">
-        @for (p of topPeliculas; track p.id; let i = $index) {
-          <div class="card-top">
-            <span class="badge badge-rank">#{{ i + 1 }}</span>
-
-            <div class="card-body">
-              <img
-                [src]="p.imagen_url || 'https://via.placeholder.com/200x300?text=Sin+Imagen'"
-                [alt]="p.nombre || p.titulo"
-                class="card-img"
-              />
-
-              <h3 class="card-title">{{ p.nombre || p.titulo }}</h3>
-              
-              <p class="card-info" *ngIf="p.duracion_minutos || p.duracion">
-                <strong>Duración:</strong> {{ p.duracion_minutos || p.duracion }} min
-              </p>
-            </div>
-
-            <div class="badge-entradas-container">
-              <span class="badge-entradas">
-                🎟️ {{ p.entradasVendidas || 0 }} entradas vendidas
-              </span>
-            </div>
-          </div>
-        }
-      </div>
-    </section>
-  }
-
-  <!-- SECCIÓN PRÓXIMAMENTE -->
-  @if (proximosEstrenos && proximosEstrenos.length > 0) {
-    <section class="section-proximamente">
-      <h2 class="title-proximamente">PROXIMAMENTE</h2>
-
-      <div class="cards-grid">
-        @for (p of proximosEstrenos; track p.id) {
-          <div class="card-proximamente">
-            <div class="card-body">
-              <img
-                [src]="p.imagen_url || 'https://via.placeholder.com/200x300?text=Pr%C3%B3ximamente'"
-                [alt]="p.nombre || p.titulo"
-                class="card-img"
-              />
-
-              <h3 class="card-title">{{ p.nombre || p.titulo }}</h3>
-              
-              <p class="card-sinopsis">
-                {{ p.sinopsis | slice:0:110 }}@if (p.sinopsis?.length > 110) { ... }
-              </p>
-
-              @if (p.sinopsis?.length > 110) {
-                <button 
-                  type="button" 
-                  (click)="comprarEntradas(p.id)" 
-                  class="btn-ver-mas-link">
-                  Ver más &rarr;
-                </button>
-              }
-
-              <p class="fecha-estreno-destacada">
-                Estreno: {{ p.fecha_estreno | date: 'dd/MM/yyyy' }}
-              </p>
-            </div>
-
-            <button (click)="activarAlerta(p)" class="btn-notificar">
-              🔔 Notificarme
-            </button>
-          </div>
-        }
-      </div>
-    </section>
-  }
-
-  <h2>Películas en Cartelera</h2>
-
-  <!-- CONTROLES DE BÚSQUEDA Y FILTRO -->
-  <div class="buscador">
-    <input
-      type="text"
-      placeholder="Buscar película por nombre..."
-      [(ngModel)]="textoBusqueda"
-      class="input-search"
-    />
-
-    <select [(ngModel)]="generoSeleccionado" class="select-filter">
-      <option value="Todos">Todos los géneros</option>
-      <option value="Acción">Acción</option>
-      <option value="Aventura">Aventura</option>
-      <option value="Comedia">Comedia</option>
-      <option value="Drama">Drama</option>
-      <option value="Ciencia Ficción">Ciencia Ficción</option>
-      <option value="Terror">Terror</option>
-      <option value="Animación">Animación</option>
-    </select>
-  </div>
-
-  <!-- GRILLA DE PELÍCULAS FILTRADAS -->
-  <div class="cards-grid">
-    @for (p of peliculasFiltradas; track p.id) {
-      <div class="card-cartelera">
-        <div class="card-body">
-          <img
-            [src]="p.imagen_url || 'https://via.placeholder.com/200x300?text=Sin+Imagen'"
-            [alt]="p.nombre || p.titulo"
-            class="card-img img-cartelera"
-          />
-
-          <h3 class="card-title title-cartelera">{{ p.nombre || p.titulo }}</h3>
-
-          <p class="card-sinopsis">
-            {{ p.sinopsis | slice:0:110 }}@if (p.sinopsis?.length > 110) { ... }
-          </p>
-
-          @if (p.sinopsis?.length > 110) {
-            <button 
-              type="button" 
-              (click)="comprarEntradas(p.id)" 
-              class="btn-ver-mas-link">
-              Ver más &rarr;
-            </button>
-          }
-
-          <p class="card-info" *ngIf="p.duracion_minutos || p.duracion">
-            <strong>Duración:</strong> {{ p.duracion_minutos || p.duracion }} min
-          </p>
-
-          @if (p.clasificacion || p.restriccion_edad) {
-            <span class="badge-clasificacion">
-              {{ p.clasificacion || p.restriccion_edad }}
-            </span>
-          }
-        </div>
-
-        <!-- BOTÓN DE COMPRA DE CARTELERA -->
-        <div class="card-footer-acciones">
-          <button 
-            class="btn-comprar"
-            [disabled]="getFuncionesDePelicula(p.id).length === 0"
-            (click)="comprarEntradas(p.id)"
-          >
-            {{ getFuncionesDePelicula(p.id).length > 0 ? 'Comprar entradas' : 'Sin funciones' }}
-          </button>
-        </div>
-
-        <!-- ESTRELLAS Y BOTÓN DE RESEÑAS -->
-        <div class="resenas-footer">
-          <div class="stars-rating" [title]="p.rating > 0 ? 'Calificación: ' + p.rating + '/5' : 'Sin puntuación'">
-            @for (star of [1, 2, 3, 4, 5]; track star) {
-              <span>{{ (p.rating || 0) >= star ? '★' : '☆' }}</span>
-            }
-          </div>
-
-          <button type="button" (click)="verResenas(p)" class="btn-ver-resenas">
-            Ver Reseñas
-          </button>
-        </div>
-        
-      </div>
-    } @empty {
-      <p class="sin-resultados">
-        No se encontraron películas que coincidan con la búsqueda.
-      </p>
-    }
-  </div>
-
-  <!-- MODAL DE NOTIFICACIÓN DE ALERTA DE ESTRENO -->
-  @if (mostrarModalAlerta) {
-    <div class="modal-overlay modal-overlay-alerta">
-      <div class="modal-content modal-content-alerta">
-        <div class="modal-icon">🔔</div>
-        <h3 class="modal-title">Notificación</h3>
-        <p class="modal-text">{{ mensajeModalAlerta }}</p>
-        <button type="button" (click)="cerrarModalAlerta()" class="btn-modal-primary">
-          Aceptar
-        </button>
-      </div>
+<div class="contenedor pagina">
+  @if (cargando()) {
+    <div class="marquesina esqueleto" aria-busy="true">
+      <p class="texto-suave">Cargando…</p>
     </div>
-  }
-
-  <!-- MODAL INTERACTIVO PARA VER Y ESCRIBIR RESEÑAS -->
-  @if (mostrarModalResenas) {
-    <div class="modal-overlay">
-      <div class="modal-content modal-content-resenas">
-        
-        <div class="modal-header">
-          <h3>💬 Reseñas: {{ peliculaSeleccionadaModal?.nombre || peliculaSeleccionadaModal?.titulo }}</h3>
-          <button (click)="cerrarModalResenas()" class="btn-close-modal">&times;</button>
-        </div>
-
-        <!-- FORMULARIO PARA ESCRIBIR NUEVA RESEÑA -->
-        <div class="form-resena">
-          <h4 class="form-resena-title">Escribir una reseña</h4>
-          
-          <div class="form-group-rating">
-            <label>Tu puntuación: </label>
-            <select [(ngModel)]="nuevaResenaEstrellas" class="select-stars">
-              <option [ngValue]="5">⭐⭐⭐⭐⭐ (5/5)</option>
-              <option [ngValue]="4">⭐⭐⭐⭐☆ (4/5)</option>
-              <option [ngValue]="3">⭐⭐⭐☆☆ (3/5)</option>
-              <option [ngValue]="2">⭐⭐☆☆☆ (2/5)</option>
-              <option [ngValue]="1">⭐☆☆☆☆ (1/5)</option>
-            </select>
-          </div>
-
-          <textarea 
-            [(ngModel)]="nuevaResenaTexto" 
-            placeholder="¿Qué te pareció la película?" 
-            rows="3" 
-            class="textarea-resena"
-          ></textarea>
-
-          <button 
-            (click)="agregarResena()" 
-            [disabled]="!nuevaResenaTexto.trim()"
-            class="btn-publicar-resena"
-          >
-            Publicar Reseña
-          </button>
-        </div>
-
-        <!-- LISTA DE RESEÑAS PUBLICADAS -->
-        <div class="resenas-list-container">
-          <h4 class="resenas-list-title">Opiniones de los espectadores:</h4>
-          @for (r of resenasModal; track r.fecha) {
-            <div class="resena-item">
-              <div class="resena-header">
-                <strong>{{ r.autor }}</strong>
-                <span class="stars-rating">
-                  @for (star of [1, 2, 3, 4, 5]; track star) {
-                    <span>{{ r.estrellas >= star ? '★' : '☆' }}</span>
+  } @else if (error()) {
+    <p class="mensaje error">{{ error() }}</p>
+  } @else {
+    <!-- Marquesina: las 3 más vendidas -->
+    @if (masVendidas().length) {
+      <section class="marquesina" aria-labelledby="titulo-marquesina">
+        <h1 id="titulo-marquesina">Las más vistas</h1>
+        <ol class="podio">
+          @for (p of masVendidas(); track p.id; let i = $index) {
+            <li>
+              <a [routerLink]="['/pelicula', p.id]" class="podio-item">
+                <span class="puesto" aria-hidden="true">{{ i + 1 }}</span>
+                <img class="poster" [src]="p.imagen_url" [respaldo]="p.nombre" [alt]="'Póster de ' + p.nombre" loading="lazy" />
+                <span class="podio-texto">
+                  <strong>{{ p.nombre }}</strong>
+                  <span class="texto-suave numero">{{ p.vendidas }} {{ p.vendidas === 1 ? 'entrada vendida' : 'entradas vendidas' }}</span>
+                  @if (p.puntaje) {
+                    <app-estrellas [valor]="p.puntaje.promedio" />
                   }
                 </span>
-              </div>
-              <p class="resena-comentario">{{ r.comentario }}</p>
-              <small class="resena-fecha">{{ r.fecha | date:'dd/MM/yyyy HH:mm' }}</small>
+              </a>
+            </li>
+          }
+        </ol>
+      </section>
+    } @else {
+      <section class="marquesina vacia">
+        <h1>Esta semana en CineWidi</h1>
+        <p>Elegí película, horario y butaca. Si te registrás, la primera compra tiene descuento.</p>
+      </section>
+    }
+
+    <!-- Cartelera con buscador -->
+    <section class="seccion" aria-labelledby="titulo-cartelera">
+      <div class="cabecera-seccion">
+        <h2 class="titulo-seccion" id="titulo-cartelera">En cartelera</h2>
+        <span class="texto-suave numero">{{ filtradas().length }} de {{ enCartelera().length }}</span>
+      </div>
+
+      <div class="filtros">
+        <label class="buscador">
+          <span class="sr">Buscar película</span>
+          <input class="entrada" type="search" placeholder="Buscar por título o sinopsis"
+            [value]="busqueda()" (input)="busqueda.set($any($event.target).value)" />
+        </label>
+        @if (generosDisponibles().length) {
+          <div class="fichas" role="group" aria-label="Filtrar por género">
+            @for (g of generosDisponibles(); track g) {
+              <button type="button" class="ficha" [attr.aria-pressed]="generosElegidos().includes(g)" (click)="alternarGenero(g)">{{ g }}</button>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="grilla">
+        @for (p of filtradas(); track p.id) {
+          <article class="tarjeta">
+            <a [routerLink]="['/pelicula', p.id]" class="tarjeta-enlace">
+              <img class="poster" [src]="p.imagen_url" [respaldo]="p.nombre" [alt]="'Póster de ' + p.nombre" loading="lazy" />
+              <h3>{{ p.nombre }}</h3>
+            </a>
+            <div class="datos">
+              <span class="etiqueta-clasif" [class.restringida]="restringida(p)">{{ p.clasificacion }}</span>
+              <span class="texto-suave">{{ p.duracion_minutos }} min</span>
             </div>
-          } @empty {
-            <p class="sin-resenas">Aún no hay reseñas para esta película. ¡Sé el primero en dejar la tuya!</p>
+            <p class="generos texto-suave">{{ p.generos.join(', ') }}</p>
+            <div class="puntaje">
+              @if (p.puntaje) {
+                <app-estrellas [valor]="p.puntaje.promedio" />
+                <span class="texto-suave numero">{{ p.puntaje.promedio.toFixed(1) }} · {{ p.puntaje.cantidad }}</span>
+              } @else {
+                <span class="texto-suave">Sin reseñas todavía</span>
+              }
+            </div>
+            @if (p.proximaFuncion) {
+              <a class="boton chico ancho" [routerLink]="['/pelicula', p.id]">Ver horarios</a>
+            } @else {
+              <span class="sin-funciones">Sin funciones programadas</span>
+            }
+          </article>
+        } @empty {
+          <div class="vacio">
+            <p>No hay películas que coincidan con tu búsqueda.</p>
+            <button type="button" class="boton secundario chico" (click)="limpiarFiltros()">Ver toda la cartelera</button>
+          </div>
+        }
+      </div>
+    </section>
+
+    <!-- Próximamente y preventa -->
+    <section class="seccion" id="proximamente" aria-labelledby="titulo-proximamente">
+      <div class="cabecera-seccion">
+        <h2 class="titulo-seccion" id="titulo-proximamente">Próximamente</h2>
+      </div>
+      @if (proximamente().length) {
+        <div class="tira">
+          @for (p of proximamente(); track p.id) {
+            <article class="estreno">
+              <img class="poster" [src]="p.imagen_url" [respaldo]="p.nombre" [alt]="'Póster de ' + p.nombre" loading="lazy" />
+              <div class="estreno-texto">
+                <p class="fecha-estreno">Estrena el {{ estreno(p) | date: "EEEE d 'de' MMMM" }}</p>
+                <h3>{{ p.nombre }}</h3>
+                <p class="texto-suave sinopsis">{{ p.sinopsis }}</p>
+                @if (esPreventa(p)) {
+                  <p class="preventa">Preventa abierta · ${{ p.precio_preventa }} la entrada</p>
+                  <a class="boton chico" [routerLink]="['/pelicula', p.id]">Comprar en preventa</a>
+                } @else {
+                  @if (p.preventa_activa && aperturaPreventa(p); as apertura) {
+                    <p class="texto-suave chico">Preventa desde el {{ apertura | date: 'd/M' }}</p>
+                  }
+                  @if (alertas().includes(p.id)) {
+                    <span class="avisado">Te avisamos cuando salgan las entradas</span>
+                  } @else {
+                    <button type="button" class="boton chico secundario" (click)="avisarme(p)">Avisarme cuando salgan</button>
+                  }
+                }
+              </div>
+            </article>
           }
         </div>
-
-      </div>
-    </div>
+      } @else {
+        <p class="vacio">Todavía no hay estrenos anunciados.</p>
+      }
+    </section>
   }
-
 </div>

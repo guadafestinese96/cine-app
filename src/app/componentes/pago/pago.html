@@ -1,0 +1,168 @@
+<div class="contenedor pagina">
+  <ol class="pasos" aria-label="Pasos de la compra">
+    <li>Butacas</li>
+    <li>Candy bar</li>
+    <li aria-current="step">Pago</li>
+  </ol>
+
+  @if (cargando()) {
+    <p class="texto-suave">Calculando tu compra…</p>
+  } @else if (!compras.cantidadEntradas() || !funcion()) {
+    <div class="vacio">
+      <p>No hay ninguna compra en curso.</p>
+      <a routerLink="/catalogo" class="boton secundario chico">Ir a la cartelera</a>
+    </div>
+  } @else {
+    <header class="encabezado">
+      <h1>{{ pelicula()?.nombre }}</h1>
+      <p class="texto-suave">{{ descripcion() }}</p>
+    </header>
+
+    <div class="disposicion">
+      <div class="columna">
+        <!-- Datos del comprador -->
+        @if (auth.usuarioActual(); as u) {
+          <section class="panel">
+            <h2>Comprás como {{ u.nombre }} {{ u.apellido }}</h2>
+            <p class="texto-suave">Sumás {{ totales().puntos }} puntos con esta compra.</p>
+          </section>
+        } @else {
+          <section class="panel">
+            <h2>Tus datos</h2>
+            <p class="texto-suave bajada">
+              Podés comprar sin cuenta. <a routerLink="/registro">Registrate</a> y la primera compra tiene descuento, además de sumar puntos.
+            </p>
+            <div class="fila-campos">
+              <div class="campo">
+                <label for="nombre">Nombre y apellido</label>
+                <input id="nombre" class="entrada" autocomplete="name" [value]="nombre()" (input)="nombre.set($any($event.target).value)" />
+              </div>
+              <div class="campo">
+                <label for="email">Mail para recibir la entrada</label>
+                <input id="email" class="entrada" type="email" autocomplete="email" [value]="email()" (input)="email.set($any($event.target).value)" />
+                @if (email() && !emailValido()) {
+                  <span class="error-campo">Revisá el formato del mail.</span>
+                }
+              </div>
+            </div>
+          </section>
+        }
+
+        <!-- Descuentos -->
+        @if (auth.usuarioActual()) {
+          <section class="panel">
+            <h2>Descuentos</h2>
+
+            @if (cupon(); as c) {
+              <div class="cupon-aplicado">
+                <div>
+                  <strong>{{ c.codigo }} · {{ c.porcentaje }}% off</strong>
+                  <span class="texto-suave">{{ cuponAutomatico() ? 'Regalo de bienvenida por tu primera compra' : c.descripcion }}</span>
+                </div>
+                <button type="button" class="boton fantasma chico" (click)="quitarCupon()">Quitar</button>
+              </div>
+            }
+
+            <form class="cupon" (submit)="$event.preventDefault(); aplicarCupon()">
+              <label for="cupon" class="etiqueta">{{ cupon() ? 'Usar otro cupón' : 'Cupón de descuento' }}</label>
+              <div class="cupon-fila">
+                <input id="cupon" class="entrada" placeholder="Ej. MAYOR50" [value]="codigoCupon()"
+                  (input)="codigoCupon.set($any($event.target).value)" autocapitalize="characters" />
+                <button class="boton secundario" type="submit" [disabled]="!codigoCupon().trim()">Aplicar</button>
+              </div>
+              @if (errorCupon()) {
+                <span class="error-campo">{{ errorCupon() }}</span>
+              }
+            </form>
+
+            @if (canjes().length) {
+              <div class="canjes">
+                <span class="etiqueta">Entradas gratis canjeadas con puntos</span>
+                @for (c of canjes(); track c.codigo) {
+                  <label class="casilla">
+                    <input type="checkbox" [checked]="canjeElegido() === c.codigo" (change)="alternarCanje(c.codigo)" />
+                    {{ c.nombre }} <span class="texto-suave">({{ c.codigo }})</span>
+                  </label>
+                }
+              </div>
+            }
+
+            @if ((auth.usuarioActual()?.credito ?? 0) > 0) {
+              <label class="casilla credito">
+                <input type="checkbox" [checked]="usarCredito()" (change)="usarCredito.set(!usarCredito())" />
+                Usar mi crédito en cuenta (${{ auth.usuarioActual()?.credito }})
+              </label>
+            }
+          </section>
+        }
+
+        <!-- Medio de pago -->
+        @if (totales().aPagar > 0) {
+          <section class="panel">
+            <h2>Medio de pago</h2>
+            <div class="fichas" role="radiogroup" aria-label="Medio de pago">
+              @for (m of medios; track m) {
+                <button type="button" class="ficha" role="radio" [attr.aria-checked]="medio() === m" [class.activa]="medio() === m" (click)="medio.set(m)">{{ m }}</button>
+              }
+            </div>
+            <p class="texto-suave nota">Pago simulado para el trabajo práctico: no se realiza ningún cobro real.</p>
+          </section>
+        }
+
+        @if (esMenor()) {
+          <p class="mensaje info">Como sos menor de edad, la entrada va a indicar que tenés que ingresar acompañado/a de un adulto.</p>
+        } @else if (minima() > 0 && !pideDeclaracion()) {
+          <p class="mensaje info">Película {{ clasificacion() }}: la entrada indica que los menores de edad deben ingresar acompañados de un adulto.</p>
+        }
+
+        @if (pideDeclaracion()) {
+          <label class="casilla declaracion">
+            <input type="checkbox" [checked]="declaraEdad()" (change)="declaraEdad.set(!declaraEdad())" />
+            Declaro tener {{ minima() }} años o más. La película es {{ clasificacion() }} y la entrada indica que se debe ingresar con un adulto.
+          </label>
+        }
+      </div>
+
+      <!-- Resumen tipo entrada -->
+      <aside class="resumen entrada-papel" aria-label="Resumen del pago">
+        <div class="resumen-arriba">
+          <h2>Resumen</h2>
+          <dl class="lineas">
+            <div>
+              <dt>
+                Entradas
+                @for (b of compras.enCurso().butacas; track b.fila + b.numero) {
+                  <span class="butaca" [class.vip]="b.tipo === 'vip'">{{ b.fila }}{{ b.numero }}{{ b.tipo === 'vip' ? ' VIP' : '' }}</span>
+                }
+              </dt>
+              <dd class="numero">${{ totales().entradas }}</dd>
+            </div>
+            @if (totales().combos) {
+              <div><dt>Combos</dt><dd class="numero">${{ totales().combos }}</dd></div>
+            }
+            @if (totales().productos) {
+              <div><dt>Candy bar</dt><dd class="numero">${{ totales().productos }}</dd></div>
+            }
+            @if (totales().descuentoCanje) {
+              <div class="descuento"><dt>Entrada canjeada</dt><dd class="numero">−${{ totales().descuentoCanje }}</dd></div>
+            }
+            @if (totales().descuentoCupon) {
+              <div class="descuento"><dt>Cupón {{ cupon()?.codigo }} ({{ cupon()?.porcentaje }}%)</dt><dd class="numero">−${{ totales().descuentoCupon }}</dd></div>
+            }
+            @if (totales().creditoUsado) {
+              <div class="descuento"><dt>Crédito en cuenta</dt><dd class="numero">−${{ totales().creditoUsado }}</dd></div>
+            }
+          </dl>
+        </div>
+        <hr class="troquel" />
+        <div class="resumen-abajo">
+          <div class="total"><span>A pagar</span><strong class="numero">${{ totales().aPagar }}</strong></div>
+          <button type="button" class="boton oscuro ancho" [disabled]="!puedePagar()" (click)="pagar()">
+            {{ pagando() ? 'Procesando…' : totales().aPagar > 0 ? 'Pagar $' + totales().aPagar : 'Confirmar compra' }}
+          </button>
+          <a routerLink="/candy" class="volver">Volver al candy bar</a>
+        </div>
+      </aside>
+    </div>
+  }
+</div>

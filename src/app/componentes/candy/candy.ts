@@ -1,174 +1,96 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
-import { CandyService, ProductoCandy } from '../../services/candy';
+import { ImagenRespaldoDirective } from '../compartidos/imagen-respaldo';
+import { Component, computed, inject, signal } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
+import { CandyService } from '../../services/candy';
+import { ComprasService } from '../../services/compras';
+import { FuncionesService } from '../../services/funciones';
+import { PeliculasService } from '../../services/peliculas';
+import { ConfiguracionService } from '../../services/configuracion';
+import { AvisosService } from '../../services/avisos';
+import { Combo, Funcion, ProductoCandy } from '../../core/modelos';
+import { errorLegible, formatearFuncion } from '../../core/utilidades';
 
 @Component({
   selector: 'app-candy',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [ImagenRespaldoDirective, RouterLink],
   templateUrl: './candy.html',
-  styleUrl: './candy.css'
+  styleUrl: './candy.css',
 })
-export class CandyComponent implements OnInit {
-  productos: ProductoCandy[] = [];
-  carritoCandy: { producto: ProductoCandy; cantidad: number }[] = [];
+export class CandyComponent {
+  private candySrv = inject(CandyService);
+  private funcionesSrv = inject(FuncionesService);
+  private peliculasSrv = inject(PeliculasService);
+  private config = inject(ConfiguracionService);
+  private avisos = inject(AvisosService);
+  private router = inject(Router);
+  compras = inject(ComprasService);
 
-  usuarioLogueado: any = null;
+  cargando = signal(true);
+  funcion = signal<Funcion | null>(null);
+  productos = signal<ProductoCandy[]>([]);
+  combos = signal<Combo[]>([]);
+  categoria = signal('Todas');
 
-  codigoCupon: string = '';
-  porcentajeDescuento: number = 0;
-  mensajeCuponError: string = '';
-  mensajeCuponExito: string = '';
+  categorias = computed(() => ['Todas', ...new Set(this.productos().map((p) => p.categoria || 'Otros'))]);
+  productosVisibles = computed(() =>
+    this.categoria() === 'Todas' ? this.productos() : this.productos().filter((p) => (p.categoria || 'Otros') === this.categoria()),
+  );
 
-  constructor(
-    private candyService: CandyService,
-    private router: Router,
-    private cdr: ChangeDetectorRef
-  ) {}
+  precioEstandar = computed(() => this.peliculasSrv.precioEntrada(this.funcion()?.peliculas, this.funcion()));
+  combosDisponibles = computed(() => this.compras.cantidadEntradas() - this.compras.cantidadCombos());
+
+  totales = computed(() =>
+    this.compras.calcularTotales(this.compras.enCurso(), {
+      precioEstandar: this.precioEstandar(),
+      porcentajeCupon: 0,
+      usarCanjeEntrada: false,
+      creditoDisponible: 0,
+      usarCredito: false,
+      registrado: false,
+    }),
+  );
+
+  butacasTexto = computed(() => this.compras.enCurso().butacas.map((b) => b.fila + b.numero).join(', '));
+
+  descripcion = computed(() => {
+    const f = this.funcion();
+    return f ? `${f.peliculas?.nombre} · ${formatearFuncion(f.fecha_hora)} · ${f.salas?.nombre ?? 'Sala ' + f.sala_id}` : '';
+  });
 
   async ngOnInit() {
-    const usr = localStorage.getItem('usuario_logueado');
-    if (usr) {
-      try {
-        this.usuarioLogueado = JSON.parse(usr);
-      } catch (e) {
-        this.usuarioLogueado = null;
-      }
-    }
-
-    this.recuperarCarritoExistente();
-    await this.cargarProductos();
-  }
-
-  recuperarCarritoExistente() {
-    const guardado = localStorage.getItem('carrito_candy');
-    if (guardado) {
-      try {
-        this.carritoCandy = JSON.parse(guardado);
-      } catch (e) {
-        this.carritoCandy = [];
-      }
-    }
-
-    const descuentoGuardado = localStorage.getItem('descuento_aplicado');
-    if (descuentoGuardado && this.usuarioLogueado) {
-      this.porcentajeDescuento = Number(descuentoGuardado);
-    }
-  }
-
-  async cargarProductos() {
+    // Sin compra en curso la pantalla funciona como menú del candy bar (solo para ver)
+    const c = this.compras.enCurso();
+    const comprando = !!c.funcionId && c.butacas.length > 0;
     try {
-      const res = await this.candyService.obtenerProductos();
-      this.productos = res;
-      this.cdr.detectChanges();
-    } catch (err) {
-      console.error('Error al cargar productos:', err);
+      await this.config.cargar();
+      const [funcion, productos, combos] = await Promise.all([
+        comprando ? this.funcionesSrv.obtener(c.funcionId!) : Promise.resolve(null),
+        this.candySrv.obtenerProductos(),
+        this.candySrv.obtenerCombos(),
+      ]);
+      this.funcion.set(funcion);
+      this.productos.set(productos);
+      this.combos.set(combos);
+    } catch (e) {
+      this.avisos.error(errorLegible(e));
+    } finally {
+      this.cargando.set(false);
     }
   }
 
-  agregarAlCarrito(prod: ProductoCandy) {
-    const item = this.carritoCandy.find(c => c.producto.id === prod.id);
-    if (item) {
-      item.cantidad++;
-    } else {
-      this.carritoCandy.push({ producto: prod, cantidad: 1 });
-    }
-    this.guardarTemporal();
+  sumarProducto(p: ProductoCandy, delta: number) {
+    this.compras.cambiarCantidad('productos', { id: p.id!, nombre: p.nombre, precio: p.precio }, delta);
   }
 
-  quitarDelCarrito(prod: ProductoCandy) {
-    const index = this.carritoCandy.findIndex(c => c.producto.id === prod.id);
-    if (index !== -1) {
-      if (this.carritoCandy[index].cantidad > 1) {
-        this.carritoCandy[index].cantidad--;
-      } else {
-        this.carritoCandy.splice(index, 1);
-      }
-    }
-    this.guardarTemporal();
-  }
-
-  getCantidad(prod: ProductoCandy): number {
-    if (!prod || prod.id === undefined) return 0;
-    const item = this.carritoCandy.find(c => c.producto.id === prod.id);
-    return item ? item.cantidad : 0;
-  }
-
-  get subtotalCandy(): number {
-    return this.carritoCandy.reduce((acc, c) => acc + (c.producto.precio * c.cantidad), 0);
-  }
-
-  get montoDescuento(): number {
-    return (this.subtotalCandy * this.porcentajeDescuento) / 100;
-  }
-
-  get totalCandy(): number {
-    return this.subtotalCandy - this.montoDescuento;
-  }
-
-  aplicarCupon() {
-    this.mensajeCuponError = '';
-    this.mensajeCuponExito = '';
-
-    if (!this.usuarioLogueado) {
-      this.mensajeCuponError = 'Debes estar registrado para aplicar cupones.';
+  sumarCombo(c: Combo, delta: number) {
+    if (delta > 0 && this.combosDisponibles() <= 0) {
+      this.avisos.mostrar('Cada combo incluye una entrada: ya tenés un combo por cada butaca elegida.');
       return;
     }
-
-    const idUsuario = this.usuarioLogueado.email || this.usuarioLogueado.id || 'anonimo';
-    const cuponIngresado = this.codigoCupon.trim().toUpperCase();
-
-    if (cuponIngresado === 'BIENVENIDA' || cuponIngresado === 'BIENVENIDA20') {
-      const cuponesUsados = JSON.parse(localStorage.getItem('cupones_bienvenida_usados') || '[]');
-
-      if (cuponesUsados.includes(idUsuario) || this.usuarioLogueado.primer_compra_realizada) {
-        this.mensajeCuponError = 'Ya has utilizado tu cupón de bienvenida anteriormente.';
-        return;
-      }
-
-      this.porcentajeDescuento = 20;
-      this.mensajeCuponExito = '¡Cupón de bienvenida del 20% aplicado con éxito!';
-
-      cuponesUsados.push(idUsuario);
-      localStorage.setItem('cupones_bienvenida_usados', JSON.stringify(cuponesUsados));
-      localStorage.setItem('descuento_aplicado', '20');
-      return;
-    }
-
-    if (cuponIngresado === 'MAYOR50') {
-      if (!this.usuarioLogueado.fecha_nacimiento) {
-        this.mensajeCuponError = 'Debes tener tu fecha de nacimiento registrada en tu perfil para usar este cupón.';
-        return;
-      }
-
-      const hoy = new Date();
-      const nac = new Date(this.usuarioLogueado.fecha_nacimiento);
-      let edad = hoy.getFullYear() - nac.getFullYear();
-      const m = hoy.getMonth() - nac.getMonth();
-      if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) edad--;
-
-      if (edad < 50) {
-        this.mensajeCuponError = 'Este cupón exclusivo es válido únicamente para usuarios mayores de 50 años.';
-        return;
-      }
-
-      this.porcentajeDescuento = 25;
-      this.mensajeCuponExito = '¡Cupón Senior (+50 años) del 25% aplicado con éxito!';
-      localStorage.setItem('descuento_aplicado', '25');
-      return;
-    }
-
-    this.mensajeCuponError = 'El código del cupón ingresado no es válido.';
+    this.compras.cambiarCantidad('combos', { id: c.id!, nombre: c.nombre, precio: c.precio, incluye: c.incluye }, delta);
   }
 
-  guardarTemporal() {
-    localStorage.setItem('carrito_candy', JSON.stringify(this.carritoCandy));
-  }
-
-  continuarAlPago() {
-    this.guardarTemporal();
-    this.router.navigate(['/ticket']);
+  continuar() {
+    this.router.navigate(['/pago']);
   }
 }

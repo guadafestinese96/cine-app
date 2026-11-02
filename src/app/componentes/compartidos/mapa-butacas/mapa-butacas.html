@@ -1,0 +1,42 @@
+<div class="sala">
+  <div class="pantalla" aria-hidden="true"><span>Pantalla</span></div>
+
+  <div class="plano" role="group" aria-label="Plano de butacas">
+    @for (fila of plano(); track fila.letra) {
+      <div class="fila" [class.separada]="fila.letra === 'J' || fila.letra === 'R'">
+        <span class="letra">{{ fila.letra }}</span>
+        @for (bloque of fila.bloques; track $index) {
+          <div class="bloque">
+            @for (a of bloque; track $index) {
+              @if (a) {
+                <button
+                  type="button"
+                  class="butaca"
+                  [class]="'butaca ' + a.tipo + ' ' + estado(a)"
+                  [disabled]="deshabilitada(a)"
+                  [attr.aria-pressed]="estado(a) === 'mia' || (modo() === 'admin' && estado(a) === 'bloqueada')"
+                  [attr.aria-label]="descripcion(a)"
+                  [title]="descripcion(a)"
+                  (click)="tocar.emit(a)"
+                >
+                  <span aria-hidden="true">{{ a.tipo === 'adaptada' && estado(a) === 'libre' ? '♿' : a.numero }}</span>
+                </button>
+              } @else {
+                <span class="hueco" aria-hidden="true"></span>
+              }
+            }
+          </div>
+        }
+        <span class="letra">{{ fila.letra }}</span>
+      </div>
+    }
+  </div>
+</div>
+
+<ul class="leyenda">
+  <li><span class="muestra estandar libre"></span>Libre</li>
+  <li><span class="muestra estandar mia"></span>{{ modo() === 'admin' ? 'Fuera de servicio' : 'Tu elección' }}</li>
+  <li><span class="muestra estandar ocupada"></span>Ocupada</li>
+  <li><span class="muestra adaptada libre"></span>Accesible (filas J y K)</li>
+  <li><span class="muestra vip libre"></span>VIP (filas R, S y T)</li>
+</ul>

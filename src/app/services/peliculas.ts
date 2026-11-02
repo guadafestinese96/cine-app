@@ -1,337 +1,236 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { SupabaseService } from './supabase';
-import { RealtimeChannel } from '@supabase/supabase-js';
-import { Observable, Subject } from 'rxjs';
+import { ActividadService } from './actividad';
+import { ConfiguracionService } from './configuracion';
+import { Funcion, Pelicula, Resena } from '../core/modelos';
+import { inicioDelDia, normalizarGeneros, parsearFechaLocal, sumarDias } from '../core/utilidades';
 
-@Injectable({
-  providedIn: 'root',
-})
+export type EstadoVenta = 'cartelera' | 'preventa' | 'proximamente' | 'oculta';
+
+export interface Puntaje {
+  promedio: number;
+  cantidad: number;
+}
+
+export const DIAS_PREVENTA = 7;
+
+@Injectable({ providedIn: 'root' })
 export class PeliculasService {
-  private canalRealtime: RealtimeChannel | null = null;
-  private realtimeSubject = new Subject<any>();
+  private sb = inject(SupabaseService).client;
+  private actividad = inject(ActividadService);
+  private config = inject(ConfiguracionService);
 
-  constructor(private supabase: SupabaseService) {}
+  // ---------------------------------------------------------------- Películas
 
-  // --- REALTIME BUTACAS ---
-
-  escucharButacasRealtime(funcionId: number): Observable<any> {
-    if (this.canalRealtime) {
-      this.supabase.client.removeChannel(this.canalRealtime);
-    }
-
-    this.canalRealtime = this.supabase.client
-      .channel(`realtime-butacas-${funcionId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // Escucha INSERT y DELETE
-          schema: 'public',
-          table: 'butacas_ocupadas',
-          filter: `funcion_id=eq.${funcionId}`,
-        },
-        (payload) => {
-          this.realtimeSubject.next(payload);
-        }
-      )
-      .subscribe();
-
-    return this.realtimeSubject.asObservable();
-  }
-
-  async obtenerButacasOcupadas(funcionId: number) {
-    const { data, error } = await this.supabase.client
-      .from('butacas_ocupadas')
-      .select('fila, numero, session_id, usuario_email')
-      .eq('funcion_id', funcionId);
-
+  async listar(incluirOcultas = false): Promise<Pelicula[]> {
+    let consulta = this.sb.from('peliculas').select('*').order('nombre');
+    if (!incluirOcultas) consulta = consulta.or('activa.eq.true,activa.is.null');
+    const { data, error } = await consulta;
     if (error) throw error;
-    return data || [];
+    return (data ?? []).map((p) => this.normalizar(p));
   }
 
-  async ocuparButaca(funcionId: number, fila: string, numero: number, sessionId: string, usuarioEmail?: string) {
-    const { data, error } = await this.supabase.client
-      .from('butacas_ocupadas')
-      .insert([
-        {
-          funcion_id: Number(funcionId),
-          fila: String(fila),
-          numero: Number(numero),
-          session_id: sessionId,
-          usuario_email: usuarioEmail || null,
-        },
-      ])
-      .select();
-
+  async obtener(id: number): Promise<Pelicula | null> {
+    const { data, error } = await this.sb.from('peliculas').select('*').eq('id', id).maybeSingle();
     if (error) throw error;
-    return data;
+    return data ? this.normalizar(data) : null;
   }
 
-  async liberarButaca(funcionId: number, fila: string, numero: number, sessionId: string) {
-    const { error } = await this.supabase.client
-      .from('butacas_ocupadas')
-      .delete()
-      .eq('funcion_id', Number(funcionId))
-      .eq('fila', String(fila))
-      .eq('numero', Number(numero))
-      .eq('session_id', sessionId);
-
-    if (error) {
-      console.error('Error al liberar la butaca:', error);
-      throw error;
-    }
+  private normalizar(p: any): Pelicula {
+    return {
+      ...p,
+      nombre: p.nombre ?? p.titulo ?? 'Sin título',
+      duracion_minutos: Number(p.duracion_minutos ?? p.duracion ?? 120),
+      genero: normalizarGeneros(p.genero),
+      clasificacion: p.clasificacion ?? p.restriccion_edad ?? 'ATP',
+      precio_preventa: p.precio_preventa != null ? Number(p.precio_preventa) : null,
+    };
   }
 
-  desconectarRealtime() {
-    if (this.canalRealtime) {
-      this.supabase.client.removeChannel(this.canalRealtime);
-      this.canalRealtime = null;
-    }
-  }
-
-  // --- PELÍCULAS ---
-
-  async obtenerPeliculas() {
-    const { data, error } = await this.supabase.client.from('peliculas').select('*');
-    if (error) return [];
-    return data;
-  }
-
-  async obtenerPeliculasActivas() {
-    const { data, error } = await this.supabase.client
-      .from('peliculas')
-      .select('*')
-      .or('activa.eq.true,activa.is.null');
-
-    if (error) {
-      console.error('Error al obtener películas activas:', error);
-      return [];
-    }
-    return data || [];
-  }
-
-  async guardarPelicula(pelicula: {
-    nombre: string;
-    sinopsis: string;
-    duracion_minutos: number;
-    genero: string[] | string;
-    clasificacion: string;
-    imagen_url: string;
-    fecha_estreno?: string | null;
-  }) {
-    const { data, error } = await this.supabase.client.from('peliculas').insert([pelicula]).select();
-
-    if (error) throw error;
-    return data;
-  }
-
-  async agregarPelicula(pelicula: any) {
-    return this.guardarPelicula(pelicula);
-  }
-
-  async cambiarVisibilidadPelicula(id: number, activa: boolean) {
-    const { data, error } = await this.supabase.client
-      .from('peliculas')
-      .update({ activa: activa })
-      .eq('id', id)
-      .select();
-
-    if (error) {
-      console.error('Error al actualizar visibilidad en Supabase:', error);
-      throw error;
-    }
-    return data;
-  }
-
-  async obtenerTopPeliculasMasVendidas() {
-    const peliculas = await this.obtenerPeliculasActivas();
-
-    const { data: funciones } = await this.supabase.client
-      .from('funciones')
-      .select('id, pelicula_id');
-    const { data: ocupadas } = await this.supabase.client
-      .from('butacas_ocupadas')
-      .select('funcion_id');
-
-    if (!funciones || !ocupadas) return peliculas.slice(0, 3);
-
-    const ventasPorPelicula: { [peliculaId: number]: number } = {};
-
-    ocupadas.forEach((b: any) => {
-      const funcion = funciones.find((f) => Number(f.id) === Number(b.funcion_id));
-      if (funcion) {
-        const peliId = Number(funcion.pelicula_id);
-        ventasPorPelicula[peliId] = (ventasPorPelicula[peliId] || 0) + 1;
-      }
-    });
-
-    const peliculasOrdenadas = peliculas
-      .map((p) => ({
-        ...p,
-        entradasVendidas: ventasPorPelicula[Number(p.id)] || 0,
-      }))
-      .sort((a, b) => b.entradasVendidas - a.entradasVendidas);
-
-    return peliculasOrdenadas.slice(0, 3);
-  }
-
-  async obtenerProximosEstrenos() {
-    const hoy = new Date().toISOString().split('T')[0];
-
-    const { data, error } = await this.supabase.client
-      .from('peliculas')
-      .select('*')
-      .gt('fecha_estreno', hoy)
-      .order('fecha_estreno', { ascending: true });
-
-    if (error) {
-      console.error('Error al obtener próximos estrenos:', error);
-      return [];
-    }
-    return data || [];
-  }
-
-  async activarAlertaEstreno(peliculaId: number, usuarioEmail: string) {
-    const { data, error } = await this.supabase.client
-      .from('alertas_estreno')
-      .insert([{ pelicula_id: peliculaId, email_usuario: usuarioEmail }]);
-
-    if (error) throw error;
-    return data;
-  }
-
-  // --- SALAS Y FUNCIONES (ADMIN) ---
-
-  async obtenerSalas() {
-    const { data, error } = await this.supabase.client.from('salas').select('*');
-    if (error) throw error;
-    return data || [];
-  }
-
-  async obtenerFuncionesPorSala(salaId: number) {
-    const { data, error } = await this.supabase.client
-      .from('funciones')
-      .select('*, peliculas(duracion_minutos)')
-      .eq('sala_id', salaId);
-    if (error) throw error;
-    return data || [];
-  }
-
-  async guardarFuncion(funcion: {
-    pelicula_id: number;
-    sala_id: number;
-    fecha_hora: string;
-    formato: string;
-    idioma: string;
-    precio_base?: number;
-  }) {
-    const { data, error } = await this.supabase.client.from('funciones').insert([funcion]).select();
-    if (error) throw error;
-    return data;
-  }
-
-  async agregarFuncion(funcion: any) {
-    return this.guardarFuncion(funcion);
-  }
-
-  async obtenerFunciones() {
-    const { data, error } = await this.supabase.client
-      .from('funciones')
-      .select('*, peliculas(*), salas(*)');
-    if (error) throw error;
-    return data || [];
-  }
-
-  // --- CANDY BAR (ADMIN & CLIENTE) ---
-
-  async obtenerProductosCandy() {
-    const { data, error } = await this.supabase.client
-      .from('candy_bar')
-      .select('*')
-      .order('id', { ascending: true });
-
-    if (error) {
-      console.error('Error al obtener productos de Candy Bar:', error);
-      return [];
-    }
-    return data || [];
-  }
-
-  async guardarProductoCandy(producto: {
-    id?: number;
-    nombre: string;
-    descripcion?: string;
-    precio: number;
-    categoria: string;
-    imagen_url?: string;
-    es_combo?: boolean;
-  }) {
-    const datosGuardar = {
-      nombre: producto.nombre,
-      descripcion: producto.descripcion || '',
-      precio: producto.precio,
-      categoria: producto.categoria,
-      imagen_url: producto.imagen_url || '',
-      es_combo: producto.es_combo || false,
+  async guardar(pelicula: Partial<Pelicula>): Promise<Pelicula> {
+    const datos = {
+      nombre: pelicula.nombre,
+      sinopsis: pelicula.sinopsis,
+      duracion_minutos: Number(pelicula.duracion_minutos),
+      genero: pelicula.genero,
+      clasificacion: pelicula.clasificacion,
+      imagen_url: pelicula.imagen_url,
+      fecha_estreno: pelicula.fecha_estreno || null,
+      preventa_activa: !!pelicula.preventa_activa,
+      precio_preventa: pelicula.precio_preventa ? Number(pelicula.precio_preventa) : null,
     };
 
-    if (producto.id) {
-      const { data, error } = await this.supabase.client
-        .from('candy_bar')
-        .update(datosGuardar)
-        .eq('id', producto.id)
-        .select();
-
+    if (pelicula.id) {
+      const anterior = await this.obtener(pelicula.id);
+      const { data, error } = await this.sb.from('peliculas').update(datos).eq('id', pelicula.id).select().single();
       if (error) throw error;
-      return data;
-    } else {
-      const { data, error } = await this.supabase.client
-        .from('candy_bar')
-        .insert([{ ...datosGuardar, activo: true }])
-        .select();
-
-      if (error) throw error;
-      return data;
-    }
-  }
-
-  async cambiarVisibilidadProductoCandy(id: number, activo: boolean) {
-    const { data, error } = await this.supabase.client
-      .from('candy_bar')
-      .update({ activo: activo })
-      .eq('id', id)
-      .select();
-
-    if (error) {
-      console.error('Error al cambiar visibilidad de producto:', error);
-      throw error;
-    }
-    return data;
-  }
-
-  // --- RESERVAS & COMPRAS ---
-
-  async guardarCompra(compra: { funcion_id: number; butacas: any[] }) {
-    const sessionId = sessionStorage.getItem('cine_session_id') || 'sess-defecto';
-    const usuarioStorage = localStorage.getItem('usuario_logueado');
-    let email = null;
-    if (usuarioStorage) {
-      try { email = JSON.parse(usuarioStorage).email; } catch (e) {}
+      let detalle = `"${datos.nombre}"`;
+      if (anterior && (anterior.precio_preventa ?? null) !== (datos.precio_preventa ?? null)) {
+        await this.actividad.registrar(
+          'Modificó precio de preventa',
+          `${detalle}: ${anterior.precio_preventa ?? '—'} → ${datos.precio_preventa ?? '—'}`,
+        );
+      }
+      await this.actividad.registrar('Editó película', detalle);
+      return this.normalizar(data);
     }
 
-    const reservas = compra.butacas.map((b) => ({
-      funcion_id: Number(compra.funcion_id),
-      fila: String(b.fila),
-      numero: Number(b.numero),
-      session_id: sessionId,
-      usuario_email: email
-    }));
-
-    const { data, error } = await this.supabase.client
-      .from('butacas_ocupadas')
-      .insert(reservas)
-      .select();
-
+    const { data, error } = await this.sb.from('peliculas').insert([{ ...datos, activa: true }]).select().single();
     if (error) throw error;
-    return data;
+    await this.actividad.registrar('Creó película', `"${datos.nombre}"`);
+    return this.normalizar(data);
+  }
+
+  async cambiarVisibilidad(pelicula: Pelicula, activa: boolean) {
+    const { error } = await this.sb.from('peliculas').update({ activa }).eq('id', pelicula.id);
+    if (error) throw error;
+    await this.actividad.registrar(activa ? 'Mostró película' : 'Ocultó película', `"${pelicula.nombre}"`);
+  }
+
+  // ----------------------------------------------------- Reglas de venta
+
+  /**
+   * - Sin fecha de estreno o ya estrenada → cartelera.
+   * - Estreno futuro con preventa activa y dentro de los 7 días previos → preventa.
+   * - Estreno futuro fuera de esa ventana → próximamente (solo se puede pedir aviso).
+   */
+  estadoVenta(p: Pelicula, ahora = new Date()): EstadoVenta {
+    if (p.activa === false) return 'oculta';
+    if (!p.fecha_estreno) return 'cartelera';
+    const estreno = parsearFechaLocal(p.fecha_estreno);
+    const hoy = inicioDelDia(ahora);
+    if (estreno <= hoy) return 'cartelera';
+    if (p.preventa_activa && hoy >= sumarDias(estreno, -DIAS_PREVENTA)) return 'preventa';
+    return 'proximamente';
+  }
+
+  estaEnVenta(p: Pelicula): boolean {
+    const estado = this.estadoVenta(p);
+    return estado === 'cartelera' || estado === 'preventa';
+  }
+
+  /** Precio de una entrada estándar para esa función, contemplando la preventa. */
+  precioEntrada(p: Pelicula | undefined, f: Funcion | null): number {
+    if (p && this.estadoVenta(p) === 'preventa' && p.precio_preventa) return Number(p.precio_preventa);
+    if (f?.precio_base) return Number(f.precio_base);
+    return this.config.valores().precio_entrada;
+  }
+
+  fechaAperturaPreventa(p: Pelicula): Date | null {
+    if (!p.fecha_estreno) return null;
+    return sumarDias(parsearFechaLocal(p.fecha_estreno), -DIAS_PREVENTA);
+  }
+
+  /** Entradas vendidas por película (compras pagadas). */
+  async entradasVendidasPorPelicula(): Promise<Map<number, number>> {
+    const { data, error } = await this.sb
+      .from('compras')
+      .select('pelicula_id, cantidad_entradas')
+      .eq('estado', 'pagada');
+    const mapa = new Map<number, number>();
+    if (error) {
+      console.warn('No se pudieron leer las ventas', error);
+      return mapa;
+    }
+    for (const c of data ?? []) {
+      const id = Number(c.pelicula_id);
+      mapa.set(id, (mapa.get(id) ?? 0) + Number(c.cantidad_entradas || 0));
+    }
+    return mapa;
+  }
+
+  // -------------------------------------------------------------- Reseñas
+
+  async puntajes(): Promise<Map<number, Puntaje>> {
+    const { data, error } = await this.sb.from('resenas').select('pelicula_id, estrellas');
+    const acumulado = new Map<number, { suma: number; cantidad: number }>();
+    if (error) {
+      console.warn('No se pudieron leer las reseñas', error);
+      return new Map();
+    }
+    for (const r of data ?? []) {
+      const id = Number(r.pelicula_id);
+      const a = acumulado.get(id) ?? { suma: 0, cantidad: 0 };
+      a.suma += Number(r.estrellas);
+      a.cantidad++;
+      acumulado.set(id, a);
+    }
+    const resultado = new Map<number, Puntaje>();
+    acumulado.forEach((a, id) => resultado.set(id, { promedio: a.suma / a.cantidad, cantidad: a.cantidad }));
+    return resultado;
+  }
+
+  async resenas(peliculaId: number): Promise<Resena[]> {
+    const { data, error } = await this.sb
+      .from('resenas')
+      .select('*')
+      .eq('pelicula_id', peliculaId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data ?? [];
+  }
+
+  async resenasDeUsuario(usuarioId: string): Promise<Resena[]> {
+    const { data, error } = await this.sb.from('resenas').select('*').eq('usuario_id', usuarioId);
+    if (error) throw error;
+    return data ?? [];
+  }
+
+  /** Una reseña por persona y película: si ya existe se actualiza. */
+  async guardarResena(resena: Resena) {
+    const { error } = await this.sb.from('resenas').upsert(
+      [{ ...resena, comentario: (resena.comentario ?? '').slice(0, 280), created_at: new Date().toISOString() }],
+      { onConflict: 'pelicula_id,usuario_id' },
+    );
+    if (error) throw error;
+  }
+
+  // ------------------------------------------------------ Alertas de estreno
+
+  async activarAlerta(peliculaId: number, email: string) {
+    const { error } = await this.sb
+      .from('alertas_estreno')
+      .upsert([{ pelicula_id: peliculaId, email_usuario: email, notificado: false }], {
+        onConflict: 'pelicula_id,email_usuario',
+      });
+    if (error) throw error;
+  }
+
+  async alertasDeUsuario(email: string): Promise<number[]> {
+    const { data } = await this.sb.from('alertas_estreno').select('pelicula_id').eq('email_usuario', email);
+    return (data ?? []).map((a) => Number(a.pelicula_id));
+  }
+
+  /**
+   * Devuelve las películas con alerta pendiente que ya tienen entradas a la venta
+   * y las marca como notificadas para no avisar dos veces.
+   */
+  async alertasListas(email: string): Promise<Pelicula[]> {
+    const { data, error } = await this.sb
+      .from('alertas_estreno')
+      .select('pelicula_id, peliculas(*)')
+      .eq('email_usuario', email)
+      .eq('notificado', false);
+    if (error || !data?.length) return [];
+
+    const listas: Pelicula[] = [];
+    for (const alerta of data as any[]) {
+      if (!alerta.peliculas) continue;
+      const p = this.normalizar(alerta.peliculas);
+      if (!this.estaEnVenta(p)) continue;
+      const { count } = await this.sb
+        .from('funciones')
+        .select('id', { count: 'exact', head: true })
+        .eq('pelicula_id', p.id);
+      if (count) listas.push(p);
+    }
+    if (listas.length) {
+      await this.sb
+        .from('alertas_estreno')
+        .update({ notificado: true })
+        .eq('email_usuario', email)
+        .in('pelicula_id', listas.map((p) => p.id));
+    }
+    return listas;
   }
 }

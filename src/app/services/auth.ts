@@ -1,144 +1,146 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { SupabaseService } from './supabase';
+import { Rol, Usuario } from '../core/modelos';
 
-export interface CanjePuntos {
-  id: string;
-  concepto: string;
-  puntosUtilizados: number;
-  fecha: string;
+export interface DatosRegistro {
+  nombre: string;
+  apellido: string;
+  fecha_nacimiento: string;
+  tipo_sangre: string;
+  color_ojos: string;
+  dias_vacaciones: number;
 }
 
-export interface Usuario {
-  id?: string;
-  email: string;
-  nombre?: string;
-  apellido?: string;
-  rol?: 'admin' | 'cliente' | string;
-  es_admin?: boolean;
-  fecha_nacimiento?: string;
-  credito_cuenta?: number;
-  puntos?: number;
-}
-
-@Injectable({
-  providedIn: 'root'
-})
+/**
+ * Estado global de sesión con Signals.
+ * La sesión la maneja Supabase Auth; el perfil (rol, puntos, crédito) vive en la tabla `usuarios`.
+ */
+@Injectable({ providedIn: 'root' })
 export class AuthService {
-  usuarioActual = signal<Usuario | null>(this.obtenerUsuarioStorage());
-  estaAutenticado = signal<boolean>(!!this.obtenerUsuarioStorage());
+  private sb = inject(SupabaseService).client;
+  private router = inject(Router);
 
-  constructor(private router: Router) {}
+  readonly usuarioActual = signal<Usuario | null>(null);
+  readonly listo = signal(false);
+  readonly estaAutenticado = computed(() => !!this.usuarioActual());
+  readonly rol = computed<Rol | null>(() => this.usuarioActual()?.rol ?? null);
+  readonly esAdmin = computed(() => this.rol() === 'admin');
+  /** Los admins también pueden validar QRs */
+  readonly esEmpleado = computed(() => this.rol() === 'empleado' || this.rol() === 'admin');
 
-  private obtenerUsuarioStorage(): Usuario | null {
-    const usr = localStorage.getItem('usuario_logueado');
-    if (usr) {
-      try {
-        const usuario = JSON.parse(usr);
-        const emailKey = usuario.email || 'defecto';
+  private readonly inicio: Promise<void>;
 
-        // Cargar saldo de créditos
-        const creditosGbl = JSON.parse(localStorage.getItem('creditos_usuarios') || '{}');
-        usuario.credito_cuenta = creditosGbl[emailKey] ?? (usuario.credito_cuenta || 0);
-
-        // Cargar puntos fidelidad (RF-24)
-        const puntosGbl = JSON.parse(localStorage.getItem('puntos_fidelidad') || '{}');
-        usuario.puntos = puntosGbl[emailKey] ?? (usuario.puntos || 0);
-
-        return usuario;
-      } catch (e) {
-        return null;
-      }
-    }
-    return null;
-  }
-
-  iniciarSesion(usuario: Usuario) {
-    const emailKey = usuario.email || 'defecto';
-
-    // Restaurar crédito y puntos
-    const creditosGbl = JSON.parse(localStorage.getItem('creditos_usuarios') || '{}');
-    usuario.credito_cuenta = creditosGbl[emailKey] ?? (usuario.credito_cuenta || 0);
-
-    const puntosGbl = JSON.parse(localStorage.getItem('puntos_fidelidad') || '{}');
-    usuario.puntos = puntosGbl[emailKey] ?? (usuario.puntos || 0);
-
-    localStorage.setItem('usuario_logueado', JSON.stringify(usuario));
-    this.usuarioActual.set(usuario);
-    this.estaAutenticado.set(true);
-  }
-
-  // RF-24: Acumulación de puntos ($1 = 1 punto)
-  sumarPuntos(monto: number) {
-    const usuario = this.usuarioActual();
-    if (!usuario) return;
-
-    const emailKey = usuario.email || 'defecto';
-    const puntosActuales = usuario.puntos || 0;
-    const nuevosPuntos = puntosActuales + Math.floor(monto);
-
-    usuario.puntos = nuevosPuntos;
-
-    const puntosGbl = JSON.parse(localStorage.getItem('puntos_fidelidad') || '{}');
-    puntosGbl[emailKey] = nuevosPuntos;
-
-    localStorage.setItem('puntos_fidelidad', JSON.stringify(puntosGbl));
-    localStorage.setItem('usuario_logueado', JSON.stringify(usuario));
-    this.usuarioActual.set({ ...usuario });
-  }
-
-  // RF-24: Canje de puntos por premios
-  canjearPuntos(costoPuntos: number, concepto: string): boolean {
-    const usuario = this.usuarioActual();
-    if (!usuario || (usuario.puntos || 0) < costoPuntos) {
-      return false;
-    }
-
-    const emailKey = usuario.email || 'defecto';
-    usuario.puntos = (usuario.puntos || 0) - costoPuntos;
-
-    // Guardar nuevo saldo
-    const puntosGbl = JSON.parse(localStorage.getItem('puntos_fidelidad') || '{}');
-    puntosGbl[emailKey] = usuario.puntos;
-    localStorage.setItem('puntos_fidelidad', JSON.stringify(puntosGbl));
-    localStorage.setItem('usuario_logueado', JSON.stringify(usuario));
-
-    // Registrar en el historial de canjes del usuario
-    const historialCanjesGbl = JSON.parse(localStorage.getItem('historial_canjes') || '{}');
-    const misCanjes: CanjePuntos[] = historialCanjesGbl[emailKey] || [];
-
-    misCanjes.unshift({
-      id: 'CANJE-' + Math.random().toString(36).substring(2, 7).toUpperCase(),
-      concepto,
-      puntosUtilizados: costoPuntos,
-      fecha: new Date().toISOString()
+  constructor() {
+    this.inicio = this.restaurarSesion();
+    this.sb.auth.onAuthStateChange((evento) => {
+      if (evento === 'SIGNED_OUT') this.usuarioActual.set(null);
     });
-
-    historialCanjesGbl[emailKey] = misCanjes;
-    localStorage.setItem('historial_canjes', JSON.stringify(historialCanjesGbl));
-
-    this.usuarioActual.set({ ...usuario });
-    return true;
   }
 
-  obtenerHistorialCanjes(): CanjePuntos[] {
-    const usuario = this.usuarioActual();
-    if (!usuario) return [];
-    const emailKey = usuario.email || 'defecto';
-    const historialCanjesGbl = JSON.parse(localStorage.getItem('historial_canjes') || '{}');
-    return historialCanjesGbl[emailKey] || [];
+  /** Los guards esperan a que se restaure la sesión antes de decidir. */
+  esperarInicio(): Promise<void> {
+    return this.inicio;
   }
 
-  cerrarSesion() {
-    localStorage.removeItem('usuario_logueado');
-    localStorage.removeItem('descuento_aplicado');
+  private async restaurarSesion() {
+    try {
+      const { data } = await this.sb.auth.getSession();
+      const user = data.session?.user;
+      if (user) await this.cargarPerfil(user.id, user.email ?? '');
+    } catch (e) {
+      console.error('No se pudo restaurar la sesión', e);
+    } finally {
+      this.listo.set(true);
+    }
+  }
+
+  private async cargarPerfil(id: string, email: string): Promise<Usuario> {
+    const { data } = await this.sb.from('usuarios').select('*').eq('id', id).maybeSingle();
+    const usuario = this.normalizar(data ?? { id, email });
+    this.usuarioActual.set(usuario);
+    return usuario;
+  }
+
+  private normalizar(d: any): Usuario {
+    const rolLegacy = d.es_admin === true || d.email === 'admin@cineapp.com' ? 'admin' : 'cliente';
+    return {
+      id: d.id,
+      email: d.email ?? '',
+      nombre: d.nombre ?? '',
+      apellido: d.apellido ?? '',
+      fecha_nacimiento: d.fecha_nacimiento ?? null,
+      tipo_sangre: d.tipo_sangre ?? null,
+      color_ojos: d.color_ojos ?? null,
+      dias_vacaciones: d.dias_vacaciones ?? null,
+      rol: (d.rol && d.rol !== 'cliente' ? d.rol : rolLegacy) as Rol,
+      puntos: Number(d.puntos ?? 0),
+      credito: Number(d.credito ?? 0),
+    };
+  }
+
+  async iniciarSesion(email: string, password: string): Promise<Usuario> {
+    const { data, error } = await this.sb.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(this.traducirError(error.message));
+    return this.cargarPerfil(data.user.id, data.user.email ?? email);
+  }
+
+  /** Devuelve true si quedó con la sesión iniciada (cuando Supabase no exige confirmar el mail). */
+  async registrar(email: string, password: string, datos: DatosRegistro): Promise<boolean> {
+    const { data, error } = await this.sb.auth.signUp({ email, password });
+    if (error) throw new Error(this.traducirError(error.message));
+    if (!data.user) throw new Error('No se pudo crear la cuenta.');
+
+    const { error: errorPerfil } = await this.sb.from('usuarios').insert([
+      { id: data.user.id, email, ...datos, rol: 'cliente', puntos: 0, credito: 0 },
+    ]);
+    if (errorPerfil) throw new Error(errorPerfil.message);
+
+    if (data.session) {
+      await this.cargarPerfil(data.user.id, email);
+      return true;
+    }
+    return false;
+  }
+
+  async cerrarSesion() {
+    await this.sb.auth.signOut();
     this.usuarioActual.set(null);
-    this.estaAutenticado.set(false);
-    this.router.navigate(['/login']);
+    this.router.navigate(['/catalogo']);
   }
 
-  esAdmin(): boolean {
+  /** Vuelve a leer puntos y crédito desde la base. */
+  async refrescar() {
     const u = this.usuarioActual();
-    if (!u) return false;
-    return u.rol === 'admin' || u.es_admin === true || u.email === 'admin@cineapp.com';
+    if (u) await this.cargarPerfil(u.id, u.email);
+  }
+
+  actualizarSaldos(puntos: number, credito: number) {
+    const u = this.usuarioActual();
+    if (u) this.usuarioActual.set({ ...u, puntos: Number(puntos), credito: Number(credito) });
+  }
+
+  async actualizarPerfil(cambios: Partial<Usuario>) {
+    const u = this.usuarioActual();
+    if (!u) return;
+    const { error } = await this.sb.from('usuarios').update(cambios).eq('id', u.id);
+    if (error) throw error;
+    this.usuarioActual.set({ ...u, ...cambios });
+  }
+
+  /** Destino por defecto según el rol después de iniciar sesión */
+  rutaInicial(): string {
+    const rol = this.rol();
+    if (rol === 'admin') return '/admin';
+    if (rol === 'empleado') return '/validar';
+    return '/catalogo';
+  }
+
+  private traducirError(mensaje: string): string {
+    if (/invalid login credentials/i.test(mensaje)) return 'El mail o la contraseña no coinciden.';
+    if (/email not confirmed/i.test(mensaje)) return 'Confirmá tu mail desde el enlace que te enviamos antes de ingresar.';
+    if (/already registered/i.test(mensaje)) return 'Ya existe una cuenta con ese mail.';
+    if (/password should be/i.test(mensaje)) return 'La contraseña tiene que tener al menos 6 caracteres.';
+    return mensaje;
   }
 }

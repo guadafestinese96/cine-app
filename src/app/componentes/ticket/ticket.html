@@ -1,189 +1,96 @@
-<div style="max-width: 800px; margin: 30px auto; padding: 20px;">
-
-  <!-- PASO 1: PAGO Y RESUMEN -->
-  @if (!compraFinalizada) {
-    <div style="background: white; border: 1px solid #ddd; border-radius: 10px; padding: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
-      <h2 style="margin-top:0; color: #212529; border-bottom: 2px solid #eee; padding-bottom: 10px;">
-        💳 Resumen de Compra y Pago
-      </h2>
-
-      <!-- Detalle Película -->
-      <div style="margin-bottom: 20px;">
-        <h3 style="color: #007bff; margin-bottom: 5px;">
-          {{ funcionSeleccionada?.peliculas?.nombre || funcionSeleccionada?.peliculas?.titulo }}
-        </h3>
-        <p style="margin: 4px 0; color: #555;">
-          📍 Sala: <strong>{{ funcionSeleccionada?.salas?.nombre || 'Sala ' + funcionSeleccionada?.sala_id }}</strong> | 
-          Formato: <strong>{{ funcionSeleccionada?.formato || '2D' }} ({{ funcionSeleccionada?.idioma || 'Castellano' }})</strong>
+<div class="contenedor pagina">
+  @if (cargando()) {
+    <p class="texto-suave">Buscando tu entrada…</p>
+  } @else if (!compra()) {
+    <div class="vacio">
+      <p>No encontramos una compra con el código {{ codigo() }}.</p>
+      <a routerLink="/catalogo" class="boton secundario chico">Ir a la cartelera</a>
+    </div>
+  } @else {
+    @let c = compra()!;
+    <header class="encabezado">
+      @if (nueva()) {
+        <h1>¡Listo, ya tenés tu entrada!</h1>
+        @if (requiereAdulto()) {
+          <p class="mensaje info alerta-adulto" role="alert">
+            @if (compradorMenor()) {
+              Como sos menor de edad, tenés que ir acompañado/a de un adulto.
+            } @else {
+              Esta película es {{ clasificacion() }}: si sos menor de edad, tenés que ir acompañado/a de un adulto.
+            }
+          </p>
+        }
+        <p class="texto-suave">
+          Mostrá este QR en la puerta de la sala{{ candy().length ? ' y en el candy bar' : '' }}.
+          @if (c.puntos_ganados) { Sumaste {{ c.puntos_ganados }} puntos. }
         </p>
-        <p style="margin: 4px 0; color: #555;">
-          📅 Función: <strong>{{ funcionSeleccionada?.fecha_hora | date:'dd/MM/yyyy HH:mm':'UTC' }} hs</strong>
-        </p>
-      </div>
-
-      <!-- Detalle Entradas y Candy -->
-      <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
-        <div style="flex: 1; min-width: 250px; background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #e9ecef;">
-          <h4 style="margin: 0 0 8px 0; color: #333;">🎟️ Entradas ({{ butacasSeleccionadas.length }})</h4>
-          @for (b of butacasSeleccionadas; track b.fila + b.numero) {
-            <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 4px;">
-              <span>Fila {{ b.fila }} - Asiento {{ b.numero }} <small style="color:#777;">({{ b.tipo }})</small></span>
-              <strong>${{ b.precio }}</strong>
-            </div>
-          }
-          <div style="border-top: 1px solid #ddd; margin-top: 8px; padding-top: 6px; text-align: right;">
-            Subtotal: <strong>${{ subtotalEntradas }}</strong>
-          </div>
-        </div>
-
-        <div style="flex: 1; min-width: 250px; background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #e9ecef;">
-          <h4 style="margin: 0 0 8px 0; color: #333;">🍿 Candy Bar</h4>
-          @for (c of carritoCandy; track c.producto.id) {
-            <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 4px;">
-              <span>{{ c.cantidad }}x {{ c.producto.nombre }}</span>
-              <strong>${{ c.producto.precio * c.cantidad }}</strong>
-            </div>
-          } @empty {
-            <p style="font-size: 0.85rem; color: #777; font-style: italic; margin: 0;">Sin productos de confitería.</p>
-          }
-          <div style="border-top: 1px solid #ddd; margin-top: 8px; padding-top: 6px; text-align: right;">
-            Subtotal: <strong>${{ subtotalCandy }}</strong>
-          </div>
-        </div>
-      </div>
-
-      <!-- SECCIÓN CUPÓN DE DESCUENTO (SOLO PARA USUARIOS REGISTRADOS) -->
-      @if (usuarioLogueado) {
-        <div style="margin-bottom: 20px; background: #e3f2fd; padding: 15px; border-radius: 8px; border: 1px solid #90caf9;">
-          <label style="font-weight: bold; color: #0d47a1; display: block; margin-bottom: 6px;">
-            🏷️ Cupón de Descuento:
-          </label>
-          <div style="display: flex; gap: 8px;">
-            <input 
-              type="text" 
-              [(ngModel)]="codigoCuponInput" 
-              placeholder="Ej: MAYOR50" 
-              style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
-            />
-            <button 
-              type="button" 
-              (click)="aplicarCuponManual()" 
-              style="padding: 8px 16px; background: #0288d1; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;"
-            >
-              Aplicar
-            </button>
-          </div>
-          @if (mensajeCupon) {
-            <p style="margin: 8px 0 0 0; font-size: 0.85rem; font-weight: bold; color: #0d47a1;">{{ mensajeCupon }}</p>
-          }
-        </div>
+      } @else {
+        <h1>Tu entrada</h1>
       }
+    </header>
 
-      <!-- TOTALES -->
-      <div style="border-top: 2px solid #212529; padding-top: 15px; margin-bottom: 20px;">
-        <div style="display: flex; justify-content: space-between; font-size: 1rem; margin-bottom: 4px;">
-          <span>Subtotal General:</span>
-          <span>${{ subtotalGeneral }}</span>
-        </div>
-        
-        @if (montoDescuento > 0) {
-          <div style="display: flex; justify-content: space-between; font-size: 1rem; color: #28a745; font-weight: bold; margin-bottom: 4px;">
-            <span>Descuento ({{ porcentajeDescuento }}%):</span>
-            <span>-${{ montoDescuento }}</span>
-          </div>
-        }
-
-        <div style="display: flex; justify-content: space-between; font-size: 1.4rem; font-weight: bold; color: #212529; margin-top: 10px;">
-          <span>Total a Pagar:</span>
-          <span style="color: #28a745;">${{ totalPagar }}</span>
-        </div>
-      </div>
-
-      <button 
-        type="button" 
-        (click)="procesarPago()" 
-        [disabled]="cargando"
-        style="width: 100%; padding: 14px; background: #28a745; color: white; border: none; border-radius: 6px; font-size: 1.1rem; font-weight: bold; cursor: pointer;"
-      >
-        {{ cargando ? 'Procesando Pago...' : '✅ Pagar $' + totalPagar }}
-      </button>
-
-    </div>
-  }
-
-  <!-- PASO 2: TICKET GENERADO CON CÓDIGO QR -->
-  @if (compraFinalizada) {
-    <div style="background: #ffffff; border: 2px dashed #28a745; border-radius: 12px; padding: 30px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-      
-      <span style="font-size: 3rem;">🎉</span>
-      <h2 style="color: #28a745; margin: 10px 0;">¡Compra Confirmada!</h2>
-      <p style="color: #555; margin-bottom: 20px;">Presenta este comprobante o escanea el código QR en el cine.</p>
-
-      <!-- TARJETA TICKET IMPRIMIBLE -->
-      <div id="ticket-imprimible" style="background: #ffffff; border: 1px solid #ddd; border-radius: 10px; padding: 25px; max-width: 450px; margin: 0 auto; text-align: left;">
-        
-        <h3 style="margin-top: 0; text-align: center; color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 8px;">
-          🎬 TICKET DE ENTRADA & CANDY BAR
-        </h3>
-
-        <p style="margin: 8px 0;"><strong>Película:</strong> {{ funcionSeleccionada?.peliculas?.nombre || funcionSeleccionada?.peliculas?.titulo }}</p>
-        <p style="margin: 8px 0;"><strong>Sala:</strong> {{ funcionSeleccionada?.salas?.nombre || 'Sala ' + funcionSeleccionada?.sala_id }}</p>
-        <p style="margin: 8px 0;"><strong>Horario:</strong> {{ funcionSeleccionada?.fecha_hora | date:'dd/MM/yyyy HH:mm':'UTC' }} hs</p>
-        
-        <p style="margin: 8px 0;"><strong>Asientos:</strong> 
-          @for (b of butacasSeleccionadas; track b.fila + b.numero) {
-            <span style="background: #007bff; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; margin-right: 4px; font-weight: bold;">
-              {{ b.fila }}{{ b.numero }}
-            </span>
-          }
-        </p>
-
-        @if (carritoCandy.length > 0) {
-          <div style="margin-top: 12px; border-top: 1px solid #eee; padding-top: 8px;">
-            <strong>🍿 Confitería a retirar:</strong>
-            <ul style="margin: 4px 0; padding-left: 20px; font-size: 0.9rem;">
-              @for (c of carritoCandy; track c.producto.id) {
-                <li>{{ c.cantidad }}x {{ c.producto.nombre }}</li>
+    <article class="entrada-papel ticket" [class.cancelada]="c.estado === 'cancelada'">
+      <div class="ticket-arriba">
+        <span class="marca">CineWidi</span>
+        <h2>{{ c.funciones?.peliculas?.nombre }}</h2>
+        <dl class="datos">
+          <div><dt>Función</dt><dd>{{ funcionTexto() }}</dd></div>
+          <div><dt>Sala</dt><dd>{{ c.funciones?.salas?.nombre ?? 'Sala ' + c.funciones?.sala_id }}</dd></div>
+          <div><dt>Formato</dt><dd>{{ c.funciones?.formato }} · {{ c.funciones?.idioma }}</dd></div>
+          <div class="ancho">
+            <dt>Butacas</dt>
+            <dd class="butacas">
+              @for (b of c.butacas; track b.fila + b.numero) {
+                <span [class]="'butaca ' + b.tipo">{{ b.fila }}{{ b.numero }}{{ b.tipo === 'vip' ? ' VIP' : '' }}</span>
               }
-            </ul>
+            </dd>
           </div>
+          @if (candy().length) {
+            <div class="ancho">
+              <dt>Candy bar</dt>
+              <dd>
+                @for (i of candy(); track i.nombre) {
+                  <span class="item">{{ i.cantidad }} × {{ i.nombre }}</span>
+                }
+              </dd>
+            </div>
+          }
+        </dl>
+        @if (requiereAdulto()) {
+          <p class="adulto">{{ textoAdulto() }}</p>
         }
-
-        <!-- ADVERTENCIA LEGAL ACOMPAÑANTE ADULTO (RF-17) -->
-        @if (requiereAcompananteAdulto) {
-          <div style="background: #fff3cd; color: #856404; padding: 8px; border-radius: 4px; margin-top: 12px; font-size: 0.8rem; border: 1px solid #ffeeba; text-align: center;">
-            ⚠️ <strong>Atención:</strong> Película {{ funcionSeleccionada?.peliculas?.clasificacion }}. Debe ir acompañado por un adulto.
-          </div>
+      </div>
+      <hr class="troquel" />
+      <div class="ticket-abajo">
+        @if (c.estado === 'cancelada') {
+          <p class="sello">Cancelada</p>
+        } @else if (qr()) {
+          <img [src]="qr()" alt="Código QR de la compra" width="200" height="200" />
         }
-
-        <!-- CÓDIGO QR -->
-        <div style="text-align: center; margin-top: 20px; min-height: 200px;">
-          <img [src]="urlQR" alt="Código QR Ticket" style="width: 170px; height: 170px; border: 1px solid #ccc; padding: 5px; border-radius: 8px; background: white; display: inline-block;" />
-          <p style="font-size: 0.85rem; color: #555; margin-top: 8px;">Código Único: <strong>{{ codigoQR }}</strong></p>
-        </div>
-
+        <p class="codigo numero">{{ c.codigo }}</p>
+        <ul class="estados">
+          <li [class.hecho]="c.entrada_validada_at">
+            Entrada: {{ c.entrada_validada_at ? 'usada el ' + (c.entrada_validada_at | date: 'd/M HH:mm') : 'sin usar' }}
+          </li>
+          @if (candy().length) {
+            <li [class.hecho]="c.candy_entregado_at">
+              Candy: {{ c.candy_entregado_at ? 'retirado el ' + (c.candy_entregado_at | date: 'd/M HH:mm') : 'sin retirar' }}
+            </li>
+          }
+        </ul>
       </div>
+    </article>
 
-      <!-- BOTONES DE ACCIÓN -->
-      <div style="display: flex; gap: 12px; justify-content: center; margin-top: 25px; flex-wrap: wrap;">
-        <button 
-          type="button" 
-          (click)="descargarPDF()" 
-          style="padding: 12px 24px; background: #28a745; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1rem; display: flex; align-items: center; gap: 6px;"
-        >
-          📥 Descargar PDF
-        </button>
-
-        <button 
-          type="button" 
-          (click)="imprimirONavegarInicio()" 
-          style="padding: 12px 24px; background: #007bff; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1rem;"
-        >
-          Volver al Inicio
-        </button>
-      </div>
-
+    <div class="acciones">
+      <button type="button" class="boton" (click)="descargar()" [disabled]="descargando() || c.estado === 'cancelada'">
+        {{ descargando() ? 'Generando PDF…' : 'Descargar PDF' }}
+      </button>
+      @if (auth.usuarioActual()) {
+        <a routerLink="/perfil" class="boton secundario">Ver mis entradas</a>
+      } @else {
+        <a routerLink="/catalogo" class="boton secundario">Volver a la cartelera</a>
+      }
     </div>
+    <p class="texto-suave pie">Total abonado ${{ c.total_pagado }}{{ c.metodo_pago ? ' con ' + c.metodo_pago : '' }}. Guardá el PDF o este enlace: el QR es tu comprobante.</p>
   }
-
 </div>

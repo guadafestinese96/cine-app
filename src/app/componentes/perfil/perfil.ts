@@ -1,197 +1,165 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
-import { AuthService, CanjePuntos } from '../../services/auth';
+import { ImagenRespaldoDirective } from '../compartidos/imagen-respaldo';
+import { Component, computed, inject, input, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { Router, RouterLink } from '@angular/router';
+import { AuthService } from '../../services/auth';
+import { ComprasService } from '../../services/compras';
+import { FidelidadService } from '../../services/fidelidad';
+import { PeliculasService } from '../../services/peliculas';
+import { AvisosService } from '../../services/avisos';
+import { EstrellasComponent } from '../compartidos/estrellas/estrellas';
+import { Canje, Compra, Recompensa, Resena } from '../../core/modelos';
+import { errorLegible, formatearFuncion, parsearFechaLocal } from '../../core/utilidades';
 
-interface CompraHistorial {
-  id: string;
-  pelicula: string;
-  imagen_url?: string;
-  sala: string;
-  fecha_hora: string;
-  monto: number;
-  butacas: string[];
-  calificacion?: number;
-  comentario?: string;
-  cancelada?: boolean;
-  puntosGanados?: number;
+type Seccion = 'entradas' | 'peliculas' | 'puntos';
+
+interface PeliculaVista {
+  peliculaId: number;
+  nombre: string;
+  imagen: string;
+  fecha: Date;
+  veces: number;
+  estrellas: number;
 }
 
 @Component({
   selector: 'app-perfil',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [ImagenRespaldoDirective, RouterLink, DatePipe, EstrellasComponent],
   templateUrl: './perfil.html',
-  styleUrl: './perfil.css'
+  styleUrl: './perfil.css',
 })
-export class PerfilComponent implements OnInit {
-  usuario: any = null;
-  historialCompras: CompraHistorial[] = [];
-  historialCanjes: any[] = [];
-  mensajeCancelacion: string = '';
-  mensajeCanje: string = '';
-  ultimoCuponGenerado: string = '';
+export class PerfilComponent {
+  auth = inject(AuthService);
+  comprasSrv = inject(ComprasService);
+  private fidelidad = inject(FidelidadService);
+  private peliculasSrv = inject(PeliculasService);
+  private avisos = inject(AvisosService);
+  private router = inject(Router);
 
-  premiosPuntos = [
-    { id: 1, nombre: '🥤 Gaseosa Mediana', puntos: 1500 },
-    { id: 2, nombre: '🍿 Pochoclos Medianos', puntos: 2500 },
-    { id: 3, nombre: '🎟️ 1 Entrada General Gratis', puntos: 5000 },
-    { id: 4, nombre: '🥤🍿 Combo Pareja (2 Gaseosas + 1 Pochoclo Grande)', puntos: 8000 }
-  ];
+  seccion = input<Seccion>();
 
-  constructor(
-    public authService: AuthService,
-    private router: Router,
-    private cdr: ChangeDetectorRef
-  ) {}
+  cargando = signal(true);
+  compras = signal<Compra[]>([]);
+  recompensas = signal<Recompensa[]>([]);
+  canjes = signal<Canje[]>([]);
+  resenas = signal<Resena[]>([]);
+  confirmando = signal<string | null>(null);
+  ultimoCanje = signal<string | null>(null);
 
-  ngOnInit(): void {
-    this.cargarUsuario();
-    this.cargarHistorial();
-  }
+  activa = computed<Seccion>(() => this.seccion() ?? 'entradas');
 
-  cargarUsuario() {
-    this.usuario = this.authService.usuarioActual();
-    if (!this.usuario) {
-      this.router.navigate(['/login']);
-      return;
+  proximas = computed(() =>
+    this.compras().filter((c) => c.estado === 'pagada' && parsearFechaLocal(c.funciones?.fecha_hora ?? '').getTime() > Date.now()),
+  );
+  anteriores = computed(() => this.compras().filter((c) => !this.proximas().includes(c)));
+
+  /** "Mis películas": todo lo que ya vio (funciones pasadas, no canceladas), una tarjeta por película */
+  peliculasVistas = computed<PeliculaVista[]>(() => {
+    const mapa = new Map<number, PeliculaVista>();
+    const ahora = Date.now();
+    for (const c of this.compras()) {
+      const f = c.funciones;
+      if (c.estado === 'cancelada' || !f?.peliculas) continue;
+      const fecha = parsearFechaLocal(f.fecha_hora);
+      if (fecha.getTime() > ahora && !c.entrada_validada_at) continue;
+      const id = Number(f.peliculas.id);
+      const previa = mapa.get(id);
+      if (previa) {
+        previa.veces++;
+        if (fecha > previa.fecha) previa.fecha = fecha;
+      } else {
+        mapa.set(id, {
+          peliculaId: id,
+          nombre: f.peliculas.nombre,
+          imagen: f.peliculas.imagen_url,
+          fecha,
+          veces: 1,
+          estrellas: this.resenas().find((r) => Number(r.pelicula_id) === id)?.estrellas ?? 0,
+        });
+      }
     }
+    return [...mapa.values()].sort((a, b) => b.fecha.getTime() - a.fecha.getTime());
+  });
 
-    const emailKey = this.usuario.email || 'defecto';
-
-    // Cargar puntos
-    const puntosGlobales = JSON.parse(localStorage.getItem('puntos_fidelidad_usuarios') || '{}');
-    if (puntosGlobales[emailKey] !== undefined) {
-      this.usuario.puntos_fidelidad = puntosGlobales[emailKey];
-      this.usuario.puntos = puntosGlobales[emailKey];
-    } else if (this.usuario.puntos_fidelidad === undefined) {
-      this.usuario.puntos_fidelidad = this.usuario.puntos || 0;
+  async ngOnInit() {
+    try {
+      await this.auth.refrescar();
+      const u = this.auth.usuarioActual()!;
+      const [compras, recompensas, canjes, resenas] = await Promise.all([
+        this.comprasSrv.misCompras(),
+        this.fidelidad.recompensas(),
+        this.fidelidad.misCanjes(),
+        this.peliculasSrv.resenasDeUsuario(u.id),
+      ]);
+      this.compras.set(compras);
+      this.recompensas.set(recompensas);
+      this.canjes.set(canjes);
+      this.resenas.set(resenas);
+    } catch (e) {
+      this.avisos.error(errorLegible(e));
+    } finally {
+      this.cargando.set(false);
     }
-
-    // Cargar historial de canjes del localStorage
-    const canjesStorage = JSON.parse(localStorage.getItem('historial_canjes_puntos') || '[]');
-    this.historialCanjes = canjesStorage.filter((c: any) => c.usuarioEmail === emailKey);
   }
 
-  cargarHistorial() {
-    const historial = localStorage.getItem('historial_compras');
-    if (historial) {
-      this.historialCompras = JSON.parse(historial);
+  irA(seccion: Seccion) {
+    this.router.navigate([], { queryParams: { seccion: seccion === 'entradas' ? null : seccion }, replaceUrl: true });
+  }
+
+  funcionTexto(c: Compra) {
+    return c.funciones ? formatearFuncion(c.funciones.fecha_hora) : '';
+  }
+
+  butacasTexto(c: Compra) {
+    return c.butacas.map((b) => `${b.fila}${b.numero}`).join(', ');
+  }
+
+  reintegro(c: Compra) {
+    return Number(c.total_pagado) + Number(c.credito_usado);
+  }
+
+  async cancelar(c: Compra) {
+    try {
+      const credito = await this.comprasSrv.cancelar(c);
+      this.compras.update((lista) => lista.map((x) => (x.codigo === c.codigo ? { ...x, estado: 'cancelada' as const } : x)));
+      this.avisos.exito(`Compra cancelada. Te acreditamos $${credito} para tu próxima compra.`);
+    } catch (e) {
+      this.avisos.error(errorLegible(e));
+    } finally {
+      this.confirmando.set(null);
     }
   }
 
-  // RF-24: Realizar canje de puntos con generación de código de cupón
-  canjear(premio: { nombre: string; puntos: number }) {
-    this.mensajeCanje = '';
-    this.ultimoCuponGenerado = '';
-    const puntosActuales = Number(this.usuario?.puntos_fidelidad || this.usuario?.puntos || 0);
-
-    if (puntosActuales >= premio.puntos) {
-      const nuevosPuntos = puntosActuales - premio.puntos;
-      
-      this.usuario.puntos_fidelidad = nuevosPuntos;
-      this.usuario.puntos = nuevosPuntos;
-
-      // Generar código de cupón único
-      const codigoCupon = 'CANJE-' + Math.random().toString(36).substring(2, 8).toUpperCase();
-      this.ultimoCuponGenerado = codigoCupon;
-
-      // Guardar en usuario_logueado y en diccionario global de puntos
-      localStorage.setItem('usuario_logueado', JSON.stringify(this.usuario));
-      const puntosGlobales = JSON.parse(localStorage.getItem('puntos_fidelidad_usuarios') || '{}');
-      const emailKey = this.usuario.email || 'defecto';
-      puntosGlobales[emailKey] = nuevosPuntos;
-      localStorage.setItem('puntos_fidelidad_usuarios', JSON.stringify(puntosGlobales));
-
-      // Registro de canje en historial
-      const nuevoCanje = {
-        id: codigoCupon,
-        premio: premio.nombre,
-        puntos: premio.puntos,
-        fecha: new Date().toISOString(),
-        usuarioEmail: emailKey,
-        codigoCupon: codigoCupon
-      };
-
-      const todosLosCanjes = JSON.parse(localStorage.getItem('historial_canjes_puntos') || '[]');
-      todosLosCanjes.unshift(nuevoCanje);
-      localStorage.setItem('historial_canjes_puntos', JSON.stringify(todosLosCanjes));
-
-      this.historialCanjes.unshift(nuevoCanje);
-      this.mensajeCanje = `✅ ¡Canje exitoso! Presentá el cupón ${codigoCupon} en caja para retirar "${premio.nombre}".`;
-    } else {
-      this.mensajeCanje = `❌ No tenés suficientes puntos para canjear "${premio.nombre}".`;
+  async canjear(r: Recompensa) {
+    try {
+      const codigo = await this.fidelidad.canjear(r);
+      this.ultimoCanje.set(codigo);
+      this.canjes.set(await this.fidelidad.misCanjes());
+      this.avisos.exito(
+        r.tipo === 'entrada'
+          ? `Canjeaste "${r.nombre}". Se aplica en tu próxima compra online.`
+          : `Canjeaste "${r.nombre}". Mostrá el código ${codigo} en el candy bar.`,
+      );
+    } catch (e) {
+      this.avisos.error(errorLegible(e));
     }
-    this.cdr.detectChanges();
   }
 
-  calificar(item: CompraHistorial, estrellas: number) {
-    item.calificacion = estrellas;
-    this.guardarEnStorage();
-    this.cdr.detectChanges();
-  }
-
-  guardarComentario(item: CompraHistorial) {
-    this.guardarEnStorage();
-
-    const resenasExistentes = JSON.parse(localStorage.getItem('reseñas_peliculas') || '[]');
-    const nuevaResena = {
-      pelicula: item.pelicula,
-      autor: `${this.usuario?.nombre || 'Usuario'} ${this.usuario?.apellido || ''}`.trim(),
-      comentario: item.comentario || '',
-      estrellas: item.calificacion || 5,
-      fecha: new Date().toISOString(),
-      compraId: item.id
-    };
-
-    const indicePrevio = resenasExistentes.findIndex((r: any) => r.compraId === item.id);
-    if (indicePrevio !== -1) {
-      resenasExistentes[indicePrevio] = nuevaResena;
-    } else {
-      resenasExistentes.unshift(nuevaResena);
+  async calificar(p: PeliculaVista, estrellas: number) {
+    const u = this.auth.usuarioActual();
+    if (!u) return;
+    const previa = this.resenas().find((r) => Number(r.pelicula_id) === p.peliculaId);
+    try {
+      await this.peliculasSrv.guardarResena({
+        pelicula_id: p.peliculaId,
+        usuario_id: u.id,
+        autor: previa?.autor ?? `${u.nombre} ${u.apellido?.[0] ? u.apellido[0] + '.' : ''}`.trim(),
+        estrellas,
+        comentario: previa?.comentario ?? '',
+      });
+      this.resenas.set(await this.peliculasSrv.resenasDeUsuario(u.id));
+    } catch (e) {
+      this.avisos.error(errorLegible(e));
     }
-
-    localStorage.setItem('reseñas_peliculas', JSON.stringify(resenasExistentes));
-    this.mensajeCancelacion = '✅ ¡Tu reseña y puntuación fueron guardadas correctamente!';
-    this.cdr.detectChanges();
-  }
-
-  private guardarEnStorage() {
-    localStorage.setItem('historial_compras', JSON.stringify(this.historialCompras));
-  }
-
-  puedeCancelar(fechaHora: string): boolean {
-    if (!fechaHora) return false;
-    const ahora = new Date().getTime();
-    const funcionTime = new Date(fechaHora).getTime();
-    const dosHorasEnMs = 2 * 60 * 60 * 1000;
-
-    return (funcionTime - ahora) >= dosHorasEnMs;
-  }
-
-  cancelarCompra(compra: CompraHistorial) {
-    this.mensajeCancelacion = '';
-
-    if (!this.puedeCancelar(compra.fecha_hora)) {
-      this.mensajeCancelacion = '❌ Las cancelaciones solo están permitidas hasta 2 horas antes de la función.';
-      return;
-    }
-
-    compra.cancelada = true;
-
-    const nuevoCredito = Number(this.usuario.credito_cuenta || 0) + Number(compra.monto || 0);
-    this.usuario.credito_cuenta = nuevoCredito;
-
-    const creditosGbl = JSON.parse(localStorage.getItem('creditos_usuarios') || '{}');
-    const emailKey = this.usuario.email || 'defecto';
-    creditosGbl[emailKey] = nuevoCredito;
-
-    localStorage.setItem('creditos_usuarios', JSON.stringify(creditosGbl));
-    localStorage.setItem('usuario_logueado', JSON.stringify(this.usuario));
-    this.guardarEnStorage();
-
-    this.mensajeCancelacion = `✅ Compra cancelada con éxito. Se han acreditado $${compra.monto} en tu saldo a favor.`;
-    this.cdr.detectChanges();
   }
 }

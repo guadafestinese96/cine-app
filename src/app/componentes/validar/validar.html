@@ -1,0 +1,81 @@
+<div class="contenedor pagina">
+  <header class="encabezado">
+    <h1>Validar QR</h1>
+    <div class="sectores" role="radiogroup" aria-label="Puesto">
+      <button type="button" role="radio" [attr.aria-checked]="sector() === 'entrada'" (click)="elegirSector('entrada')">Puerta de sala</button>
+      <button type="button" role="radio" [attr.aria-checked]="sector() === 'candy'" (click)="elegirSector('candy')">Candy bar</button>
+    </div>
+  </header>
+
+  <div class="disposicion">
+    <section class="panel lector" aria-label="Lector">
+      @if (camaraActiva()) {
+        <div class="visor">
+          <video #video playsinline muted></video>
+          <span class="mira" aria-hidden="true"></span>
+        </div>
+        <button type="button" class="boton secundario ancho" (click)="apagarCamara()">Apagar cámara</button>
+      } @else {
+        <button type="button" class="boton ancho grande" (click)="encenderCamara()">Escanear con la cámara</button>
+      }
+      @if (errorCamara()) {
+        <p class="mensaje error">{{ errorCamara() }}</p>
+      }
+
+      <form class="manual" (submit)="$event.preventDefault(); validarManual()">
+        <label for="codigo" class="etiqueta">¿No lee el QR? Escribí el código impreso</label>
+        <div class="manual-fila">
+          <input id="codigo" class="entrada" placeholder="CW-XXXXXXXX o CANJE-XXXXXX" autocomplete="off" autocapitalize="characters"
+            [value]="codigoManual()" (input)="codigoManual.set($any($event.target).value)" />
+          <button class="boton" type="submit" [disabled]="!codigoManual().trim() || validando()">Validar</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="resultado-zona" aria-live="assertive">
+      @if (resultado(); as r) {
+        <article class="resultado" [class.valido]="r.valido">
+          <p class="veredicto">{{ r.valido ? '✓' : '✕' }} {{ r.titulo }}</p>
+          <p>{{ r.detalle }}</p>
+          @if (r.compra) {
+            <dl class="detalle-compra">
+              <div><dt>Película</dt><dd>{{ r.compra.funciones?.peliculas?.nombre }}</dd></div>
+              <div><dt>Función</dt><dd>{{ funcionTexto(r) }} · {{ r.compra.funciones?.salas?.nombre }}</dd></div>
+              <div><dt>Butacas</dt><dd>{{ butacas(r) }}</dd></div>
+              @if (candy(r).length) {
+                <div>
+                  <dt>Candy</dt>
+                  <dd>
+                    @for (i of candy(r); track i.nombre) {
+                      <span class="item">{{ i.cantidad }} × {{ i.nombre }}{{ i.incluye ? ' (' + i.incluye + ')' : '' }}</span>
+                    }
+                  </dd>
+                </div>
+              }
+              @if (r.avisoAdulto) {
+                <div><dt>Edad</dt><dd>{{ r.avisoAdulto }}</dd></div>
+              }
+            </dl>
+          }
+          <p class="codigo-leido">{{ r.codigo }}</p>
+        </article>
+      } @else {
+        <div class="vacio">Esperando un código para {{ sector() === 'entrada' ? 'la puerta de sala' : 'el candy bar' }}.</div>
+      }
+
+      @if (historial().length) {
+        <h2 class="subtitulo">Últimos escaneos</h2>
+        <ul class="historial">
+          @for (h of historial(); track h.hora.getTime()) {
+            <li [class.valido]="h.valido">
+              <span class="numero">{{ h.hora | date: 'HH:mm:ss' }}</span>
+              <span>{{ h.codigo }}</span>
+              <span>{{ h.sector === 'entrada' ? 'Sala' : 'Candy' }}</span>
+              <strong>{{ h.titulo }}</strong>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  </div>
+</div>
